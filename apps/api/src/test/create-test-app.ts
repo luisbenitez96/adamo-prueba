@@ -3,6 +3,8 @@ import { AuthService } from '../modules/auth/auth.service.js';
 import { PasswordChangeService } from '../modules/auth/password-change.service.js';
 import { SessionCookie } from '../modules/auth/session-cookie.js';
 import { SessionService } from '../modules/auth/session.service.js';
+import { CatalogService } from '../modules/services/catalog.service.js';
+import { MongoServiceRepository } from '../modules/services/mongo-service.repository.js';
 import { MongoUserRepository } from '../modules/users/mongo-user.repository.js';
 import type { RateLimitOptions } from '../shared/http/rate-limiter.js';
 import { BcryptPasswordHasher } from '../shared/security/bcrypt-password-hasher.js';
@@ -34,6 +36,7 @@ export function createTestApp({
   const emailSender = new InMemoryEmailSender();
   const clock = new ManualClock();
   const users = new MongoUserRepository();
+  const serviceRepository = new MongoServiceRepository();
   const hasher = new BcryptPasswordHasher(4);
   const tokenService = new JwtTokenService(TEST_JWT_SECRET, TEST_SESSION_SECONDS);
 
@@ -72,6 +75,7 @@ export function createTestApp({
     authService,
     sessionService,
     passwordChangeService,
+    catalogService: new CatalogService(serviceRepository),
     tokenService,
     sessionCookie,
     accountRateLimit,
@@ -79,5 +83,5 @@ export function createTestApp({
     trustProxy: false,
   });
 
-  return { app, emailSender, clock, users, hasher, tokenService };
+  return { app, emailSender, clock, users, serviceRepository, hasher, tokenService };
 }

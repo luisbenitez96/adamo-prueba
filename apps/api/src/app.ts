@@ -12,6 +12,9 @@ import { SessionController } from './modules/auth/session.controller.js';
 import type { SessionCookie } from './modules/auth/session-cookie.js';
 import type { SessionService } from './modules/auth/session.service.js';
 import { healthRouter } from './modules/health/health.routes.js';
+import { CatalogController } from './modules/services/catalog.controller.js';
+import type { CatalogService } from './modules/services/catalog.service.js';
+import { createServicesRouter } from './modules/services/services.routes.js';
 import { createErrorHandler, notFoundHandler } from './shared/http/error-handler.js';
 import { createRateLimiter } from './shared/http/rate-limiter.js';
 import type { RateLimitOptions } from './shared/http/rate-limiter.js';
@@ -21,6 +24,7 @@ export interface AppDependencies {
   authService: AuthService;
   sessionService: SessionService;
   passwordChangeService: PasswordChangeService;
+  catalogService: CatalogService;
   tokenService: TokenService;
   sessionCookie: SessionCookie;
   accountRateLimit: RateLimitOptions;
@@ -36,6 +40,8 @@ export function createApp(dependencies: AppDependencies): Express {
   app.use(express.json({ limit: '10kb' }));
   app.use(cookieParser());
 
+  const authenticate = createAuthenticate(dependencies.tokenService, dependencies.sessionCookie);
+
   app.use('/api', healthRouter);
   app.use(
     '/api/auth',
@@ -49,9 +55,16 @@ export function createApp(dependencies: AppDependencies): Express {
         dependencies.passwordChangeService,
         dependencies.sessionCookie,
       ),
-      authenticate: createAuthenticate(dependencies.tokenService, dependencies.sessionCookie),
+      authenticate,
       accountRateLimiter: createRateLimiter(dependencies.accountRateLimit),
       loginRateLimiter: createRateLimiter(dependencies.loginRateLimit),
+    }),
+  );
+  app.use(
+    '/api/services',
+    createServicesRouter({
+      catalogController: new CatalogController(dependencies.catalogService),
+      authenticate,
     }),
   );
 
