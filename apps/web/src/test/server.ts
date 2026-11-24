@@ -50,6 +50,37 @@ export const summaryHandler = http.get('*/api/summary', () =>
   HttpResponse.json({ summary: DESIGN_SUMMARY }),
 );
 
+export const DESIGN_NOTIFICATIONS = [
+  {
+    id: 'n3',
+    type: 'password-changed',
+    title: 'Cambiaste tu contraseña',
+    message: 'Tu contraseña se actualizó correctamente.',
+    read: false,
+    createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+  },
+  {
+    id: 'n2',
+    type: 'temporary-login',
+    title: 'Iniciaste sesión con una contraseña temporal',
+    message: 'Por seguridad, debes definir una contraseña nueva.',
+    read: false,
+    createdAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+  },
+  {
+    id: 'n1',
+    type: 'account-created',
+    title: 'Tu cuenta fue creada',
+    message: 'Te damos la bienvenida a AdamoServices.',
+    read: true,
+    createdAt: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+  },
+];
+
+export const notificationsHandler = http.get('*/api/notifications', () =>
+  HttpResponse.json({ notifications: DESIGN_NOTIFICATIONS, unreadCount: 2 }),
+);
+
 const STATUSES = ['active', 'pending', 'inactive'] as const;
 
 export function fakeClient(index: number) {
@@ -100,6 +131,7 @@ export const server = setupServer(
   noSessionHandler,
   servicesHandler,
   summaryHandler,
+  notificationsHandler,
   createClientsHandler(),
   logoutHandler,
 );

@@ -1,26 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { renderWithProviders } from '../../../test/render-with-providers';
 import { PageHeader } from './page-header';
 
 describe('PageHeader', () => {
   it('muestra el título como encabezado principal', () => {
-    render(<PageHeader title="Clientes" />);
+    renderWithProviders(<PageHeader title="Clientes" />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Clientes' })).toBeInTheDocument();
   });
 
-  it('incluye el botón de notificaciones, anunciado como no disponible', () => {
-    render(<PageHeader title="Clientes" />);
+  it('incluye la campana de notificaciones, ya funcional', async () => {
+    renderWithProviders(<PageHeader title="Clientes" />);
 
-    expect(screen.getByRole('button', { name: 'Notificaciones' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-  });
-
-  it('el punto rojo es decorativo', () => {
-    const { container } = render(<PageHeader title="Clientes" />);
-
-    expect(container.querySelector('button span')).toHaveAttribute('aria-hidden', 'true');
+    const bell = await screen.findByRole('button', { name: /^Notificaciones/ });
+    expect(bell).not.toHaveAttribute('aria-disabled');
+    expect(bell).toHaveAttribute('aria-expanded', 'false');
   });
 });
