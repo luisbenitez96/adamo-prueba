@@ -5,6 +5,7 @@ export const logoStyles = cva('select-none', {
     size: {
       sm: 'w-[54px]',
       lg: 'w-[188px]',
+      responsive: 'w-[54px] lg:w-[188px]',
     },
   },
   defaultVariants: {

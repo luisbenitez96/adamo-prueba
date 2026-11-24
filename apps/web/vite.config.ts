@@ -11,5 +11,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    env: { VITE_MIN_LOADING_MS: '0', VITE_MIN_NAVIGATION_MS: '0' },
+    unstubEnvs: true,
   },
 });

@@ -1,7 +1,27 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach, beforeAll } from 'vitest';
+import { server } from './server';
+
+const nativeFetch = globalThis.fetch;
+
+globalThis.fetch = (input, init) =>
+  nativeFetch(
+    typeof input === 'string' && input.startsWith('/')
+      ? new URL(input, window.location.origin)
+      : input,
+    init,
+  );
+
+beforeAll(() => {
+  server.listen({ onUnhandledFrame: 'error' });
+});
 
 afterEach(() => {
   cleanup();
+  server.resetHandlers();
+});
+
+afterAll(() => {
+  server.close();
 });

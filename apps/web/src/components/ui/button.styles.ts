@@ -19,5 +19,3 @@ export const buttonStyles = cva(
     },
   },
 );
-
-export const buttonSpinnerStyles = 'size-4 animate-spin motion-reduce:animate-none';

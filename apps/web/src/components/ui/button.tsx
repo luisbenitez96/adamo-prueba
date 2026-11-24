@@ -1,7 +1,7 @@
 import type { VariantProps } from 'class-variance-authority';
-import { LoaderCircle } from 'lucide-react';
 import type { ComponentProps } from 'react';
-import { buttonSpinnerStyles, buttonStyles } from './button.styles';
+import { buttonStyles } from './button.styles';
+import { Spinner } from './spinner';
 
 export interface ButtonProps extends ComponentProps<'button'>, VariantProps<typeof buttonStyles> {
   loading?: boolean;
@@ -25,7 +25,7 @@ export function Button({
       aria-busy={loading || undefined}
       {...buttonProps}
     >
-      {loading && <LoaderCircle className={buttonSpinnerStyles} />}
+      {loading && <Spinner />}
       {children}
     </button>
   );
