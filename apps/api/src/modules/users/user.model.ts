@@ -1,0 +1,18 @@
+import { model, Schema } from 'mongoose';
+import type { User } from './user.entity.js';
+
+export type UserDocument = Omit<User, 'id'>;
+
+const userSchema = new Schema<UserDocument>(
+  {
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, default: null },
+    tempPasswordHash: { type: String, default: null },
+    tempPasswordExpiresAt: { type: Date, default: null },
+    lastTempRequestAt: { type: Date, default: null },
+    mustChangePassword: { type: Boolean, default: false },
+  },
+  { timestamps: true },
+);
+
+export const UserModel = model<UserDocument>('User', userSchema);
