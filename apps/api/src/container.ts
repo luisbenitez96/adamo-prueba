@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import type { AppDependencies } from './app.js';
 import type { Env } from './config/env.js';
 import { AuthService } from './modules/auth/auth.service.js';
+import { PasswordChangeService } from './modules/auth/password-change.service.js';
 import { SessionCookie } from './modules/auth/session-cookie.js';
 import { SessionService } from './modules/auth/session.service.js';
 import { MongoUserRepository } from './modules/users/mongo-user.repository.js';
@@ -52,6 +53,13 @@ export function createAppDependencies(env: Env): AppDependencies {
 
   const sessionService = new SessionService({ users, hasher, tokens: tokenService, now });
 
+  const passwordChangeService = new PasswordChangeService({
+    users,
+    hasher,
+    tokens: tokenService,
+    now,
+  });
+
   const sessionCookie = new SessionCookie({
     name: SESSION_COOKIE_NAME,
     secure: env.COOKIE_SECURE,
@@ -61,6 +69,7 @@ export function createAppDependencies(env: Env): AppDependencies {
   return {
     authService,
     sessionService,
+    passwordChangeService,
     tokenService,
     sessionCookie,
     accountRateLimit: ACCOUNT_RATE_LIMIT,

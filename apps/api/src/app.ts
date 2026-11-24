@@ -6,6 +6,8 @@ import { AuthController } from './modules/auth/auth.controller.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import type { AuthService } from './modules/auth/auth.service.js';
 import { createAuthenticate } from './modules/auth/authenticate.js';
+import { PasswordChangeController } from './modules/auth/password-change.controller.js';
+import type { PasswordChangeService } from './modules/auth/password-change.service.js';
 import { SessionController } from './modules/auth/session.controller.js';
 import type { SessionCookie } from './modules/auth/session-cookie.js';
 import type { SessionService } from './modules/auth/session.service.js';
@@ -18,6 +20,7 @@ import type { TokenService } from './shared/security/token-service.js';
 export interface AppDependencies {
   authService: AuthService;
   sessionService: SessionService;
+  passwordChangeService: PasswordChangeService;
   tokenService: TokenService;
   sessionCookie: SessionCookie;
   accountRateLimit: RateLimitOptions;
@@ -40,6 +43,10 @@ export function createApp(dependencies: AppDependencies): Express {
       authController: new AuthController(dependencies.authService),
       sessionController: new SessionController(
         dependencies.sessionService,
+        dependencies.sessionCookie,
+      ),
+      passwordChangeController: new PasswordChangeController(
+        dependencies.passwordChangeService,
         dependencies.sessionCookie,
       ),
       authenticate: createAuthenticate(dependencies.tokenService, dependencies.sessionCookie),

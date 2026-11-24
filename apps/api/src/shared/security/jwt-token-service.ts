@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { AppError } from '../errors/app-error.js';
+import { InvalidSessionError } from '../errors/invalid-session-error.js';
 import { TOKEN_SCOPES } from './token-service.js';
 import type { TokenPayload, TokenService } from './token-service.js';
 
@@ -29,7 +29,7 @@ export class JwtTokenService implements TokenService {
       const decoded = jwt.verify(token, this.secret, { algorithms: [ALGORITHM] });
       return tokenPayloadSchema.parse(decoded);
     } catch {
-      throw new AppError(401, 'INVALID_TOKEN', 'La sesión no es válida o ya expiró');
+      throw new InvalidSessionError();
     }
   }
 }

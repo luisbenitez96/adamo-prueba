@@ -1,7 +1,12 @@
 import { z } from 'zod';
+import {
+  meetsPasswordPolicy,
+  PASSWORD_POLICY_MESSAGE,
+} from '../../shared/security/password-policy.js';
 
 const INVALID_EMAIL_MESSAGE = 'Ingresa un correo electrónico válido';
 const PASSWORD_REQUIRED_MESSAGE = 'Ingresa tu contraseña';
+const PASSWORDS_DO_NOT_MATCH_MESSAGE = 'Las contraseñas no coinciden';
 const MAX_EMAIL_LENGTH = 254;
 const MAX_PASSWORD_LENGTH = 128;
 
@@ -21,5 +26,19 @@ export const loginSchema = z.object({
     .max(MAX_PASSWORD_LENGTH, PASSWORD_REQUIRED_MESSAGE),
 });
 
+export const changePasswordSchema = z
+  .object({
+    newPassword: z
+      .string({ error: PASSWORD_POLICY_MESSAGE })
+      .max(MAX_PASSWORD_LENGTH, PASSWORD_POLICY_MESSAGE)
+      .refine(meetsPasswordPolicy, PASSWORD_POLICY_MESSAGE),
+    confirmPassword: z.string({ error: PASSWORDS_DO_NOT_MATCH_MESSAGE }),
+  })
+  .refine(({ newPassword, confirmPassword }) => newPassword === confirmPassword, {
+    message: PASSWORDS_DO_NOT_MATCH_MESSAGE,
+    path: ['confirmPassword'],
+  });
+
 export type EmailRequestBody = z.infer<typeof emailRequestSchema>;
 export type LoginRequestBody = z.infer<typeof loginSchema>;
+export type ChangePasswordRequestBody = z.infer<typeof changePasswordSchema>;

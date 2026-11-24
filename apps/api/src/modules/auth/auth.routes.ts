@@ -2,12 +2,14 @@ import { Router } from 'express';
 import type { RequestHandler } from 'express';
 import { validateBody } from '../../shared/http/validate-body.js';
 import type { AuthController } from './auth.controller.js';
-import { emailRequestSchema, loginSchema } from './auth.schemas.js';
+import { changePasswordSchema, emailRequestSchema, loginSchema } from './auth.schemas.js';
+import type { PasswordChangeController } from './password-change.controller.js';
 import type { SessionController } from './session.controller.js';
 
 interface AuthRouterDependencies {
   authController: AuthController;
   sessionController: SessionController;
+  passwordChangeController: PasswordChangeController;
   authenticate: RequestHandler;
   accountRateLimiter: RequestHandler;
   loginRateLimiter: RequestHandler;
@@ -16,6 +18,7 @@ interface AuthRouterDependencies {
 export function createAuthRouter({
   authController,
   sessionController,
+  passwordChangeController,
   authenticate,
   accountRateLimiter,
   loginRateLimiter,
@@ -36,6 +39,12 @@ export function createAuthRouter({
   );
   router.post('/login', loginRateLimiter, validateBody(loginSchema), sessionController.login);
   router.get('/me', authenticate, sessionController.me);
+  router.post(
+    '/change-password',
+    authenticate,
+    validateBody(changePasswordSchema),
+    passwordChangeController.changePassword,
+  );
   router.post('/logout', sessionController.logout);
 
   return router;

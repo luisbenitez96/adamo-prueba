@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { AppError } from '../../shared/errors/app-error.js';
+import { InvalidSessionError } from '../../shared/errors/invalid-session-error.js';
 import type { PasswordHasher } from '../../shared/security/password-hasher.js';
 import type { TokenScope, TokenService } from '../../shared/security/token-service.js';
+import { activeTemporaryPasswordHash } from '../users/temporary-password.js';
 import type { User } from '../users/user.entity.js';
 import type { UserRepository } from '../users/user.repository.js';
 
@@ -55,7 +57,7 @@ export class SessionService {
     const user = await this.dependencies.users.findById(userId);
 
     if (!user) {
-      throw new AppError(401, 'INVALID_TOKEN', 'La sesión no es válida o ya expiró');
+      throw new InvalidSessionError();
     }
 
     return { email: user.email, requiresPasswordChange: scope === 'password-change' };
@@ -63,7 +65,7 @@ export class SessionService {
 
   private async resolveScope(user: User, password: string): Promise<TokenScope | null> {
     const { hasher } = this.dependencies;
-    const temporaryPasswordHash = this.activeTemporaryPasswordHash(user);
+    const temporaryPasswordHash = activeTemporaryPasswordHash(user, this.dependencies.now());
 
     if (!user.passwordHash && !temporaryPasswordHash) {
       await this.spendHashingTime(password);
@@ -79,15 +81,6 @@ export class SessionService {
     }
 
     return null;
-  }
-
-  private activeTemporaryPasswordHash(user: User): string | null {
-    const { tempPasswordHash, tempPasswordExpiresAt } = user;
-    const isActive =
-      tempPasswordExpiresAt !== null &&
-      tempPasswordExpiresAt.getTime() > this.dependencies.now().getTime();
-
-    return isActive ? tempPasswordHash : null;
   }
 
   private async spendHashingTime(password: string): Promise<void> {

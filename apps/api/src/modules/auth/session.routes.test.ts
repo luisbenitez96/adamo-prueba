@@ -1,5 +1,4 @@
 import request from 'supertest';
-import type { Response } from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { JwtTokenService } from '../../shared/security/jwt-token-service.js';
 import { extractTemporaryPassword } from '../../test/in-memory-email-sender.js';
@@ -10,25 +9,12 @@ import {
   TEST_SESSION_SECONDS,
   TEST_TEMP_PASSWORD_TTL_MS,
 } from '../../test/create-test-app.js';
+import { sessionCookieOf, tokenOf } from '../../test/session-cookie-helpers.js';
 import { TestDatabase } from '../../test/test-database.js';
 import { UserModel } from '../users/user.model.js';
 
 const EMAIL = 'ana@correo.com';
 const PASSWORD = 'Secreta123';
-
-function sessionCookieOf(response: Response): string | undefined {
-  const cookies = response.headers['set-cookie'] as unknown as string[] | undefined;
-  return cookies?.find((cookie) => cookie.startsWith(`${TEST_COOKIE_NAME}=`));
-}
-
-function tokenOf(response: Response): string {
-  const cookie = sessionCookieOf(response);
-  const token = cookie?.match(new RegExp(`^${TEST_COOKIE_NAME}=([^;]+)`))?.[1];
-  if (!token) {
-    throw new Error('La respuesta no trae cookie de sesión');
-  }
-  return token;
-}
 
 describe('rutas de sesión', () => {
   const database = new TestDatabase();

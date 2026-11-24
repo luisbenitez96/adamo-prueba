@@ -1,5 +1,6 @@
 import { createApp } from '../app.js';
 import { AuthService } from '../modules/auth/auth.service.js';
+import { PasswordChangeService } from '../modules/auth/password-change.service.js';
 import { SessionCookie } from '../modules/auth/session-cookie.js';
 import { SessionService } from '../modules/auth/session.service.js';
 import { MongoUserRepository } from '../modules/users/mongo-user.repository.js';
@@ -54,6 +55,13 @@ export function createTestApp({
     now: clock.now,
   });
 
+  const passwordChangeService = new PasswordChangeService({
+    users,
+    hasher,
+    tokens: tokenService,
+    now: clock.now,
+  });
+
   const sessionCookie = new SessionCookie({
     name: TEST_COOKIE_NAME,
     secure: cookieSecure,
@@ -63,6 +71,7 @@ export function createTestApp({
   const app = createApp({
     authService,
     sessionService,
+    passwordChangeService,
     tokenService,
     sessionCookie,
     accountRateLimit,
