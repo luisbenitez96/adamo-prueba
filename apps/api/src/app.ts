@@ -12,6 +12,9 @@ import { SessionController } from './modules/auth/session.controller.js';
 import type { SessionCookie } from './modules/auth/session-cookie.js';
 import type { SessionService } from './modules/auth/session.service.js';
 import { healthRouter } from './modules/health/health.routes.js';
+import { NotificationsController } from './modules/notifications/notifications.controller.js';
+import { createNotificationsRouter } from './modules/notifications/notifications.routes.js';
+import type { NotificationService } from './modules/notifications/notification.service.js';
 import { SummaryController } from './modules/summary/summary.controller.js';
 import type { SummaryService } from './modules/summary/summary.service.js';
 import { createSummaryRouter } from './modules/summary/summary.routes.js';
@@ -29,6 +32,7 @@ export interface AppDependencies {
   passwordChangeService: PasswordChangeService;
   catalogService: CatalogService;
   summaryService: SummaryService;
+  notificationService: NotificationService;
   tokenService: TokenService;
   sessionCookie: SessionCookie;
   accountRateLimit: RateLimitOptions;
@@ -76,6 +80,14 @@ export function createApp(dependencies: AppDependencies): Express {
     '/api/summary',
     createSummaryRouter({
       summaryController: new SummaryController(dependencies.summaryService),
+      authenticate,
+    }),
+  );
+
+  app.use(
+    '/api/notifications',
+    createNotificationsRouter({
+      notificationsController: new NotificationsController(dependencies.notificationService),
       authenticate,
     }),
   );

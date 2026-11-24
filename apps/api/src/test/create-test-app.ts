@@ -4,6 +4,8 @@ import { PasswordChangeService } from '../modules/auth/password-change.service.j
 import { SessionCookie } from '../modules/auth/session-cookie.js';
 import { SessionService } from '../modules/auth/session.service.js';
 import { MongoClientRepository } from '../modules/clients/mongo-client.repository.js';
+import { MongoNotificationRepository } from '../modules/notifications/mongo-notification.repository.js';
+import { NotificationService } from '../modules/notifications/notification.service.js';
 import { SummaryService } from '../modules/summary/summary.service.js';
 import { CatalogService } from '../modules/services/catalog.service.js';
 import { MongoServiceRepository } from '../modules/services/mongo-service.repository.js';
@@ -40,6 +42,8 @@ export function createTestApp({
   const users = new MongoUserRepository();
   const serviceRepository = new MongoServiceRepository();
   const clientRepository = new MongoClientRepository();
+  const notificationRepository = new MongoNotificationRepository();
+  const notificationService = new NotificationService(notificationRepository, clock.now);
   const hasher = new BcryptPasswordHasher(4);
   const tokenService = new JwtTokenService(TEST_JWT_SECRET, TEST_SESSION_SECONDS);
 
@@ -48,6 +52,7 @@ export function createTestApp({
     hasher,
     passwordGenerator: new RandomPasswordGenerator(),
     emailSender,
+    notifications: notificationService,
     now: clock.now,
     tempPasswordTtlMs: TEST_TEMP_PASSWORD_TTL_MS,
     requestCooldownMs: TEST_REQUEST_COOLDOWN_MS,
@@ -58,6 +63,7 @@ export function createTestApp({
     users,
     hasher,
     tokens: tokenService,
+    notifications: notificationService,
     now: clock.now,
   });
 
@@ -65,6 +71,7 @@ export function createTestApp({
     users,
     hasher,
     tokens: tokenService,
+    notifications: notificationService,
     now: clock.now,
   });
 
@@ -80,6 +87,7 @@ export function createTestApp({
     passwordChangeService,
     catalogService: new CatalogService(serviceRepository, clientRepository),
     summaryService: new SummaryService(serviceRepository, clientRepository),
+    notificationService,
     tokenService,
     sessionCookie,
     accountRateLimit,
@@ -94,6 +102,7 @@ export function createTestApp({
     users,
     serviceRepository,
     clientRepository,
+    notificationRepository,
     hasher,
     tokenService,
   };

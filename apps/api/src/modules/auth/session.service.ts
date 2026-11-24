@@ -3,6 +3,7 @@ import { AppError } from '../../shared/errors/app-error.js';
 import { InvalidSessionError } from '../../shared/errors/invalid-session-error.js';
 import type { PasswordHasher } from '../../shared/security/password-hasher.js';
 import type { TokenScope, TokenService } from '../../shared/security/token-service.js';
+import type { NotificationPublisher } from '../notifications/notification-publisher.js';
 import { activeTemporaryPasswordHash } from '../users/temporary-password.js';
 import type { User } from '../users/user.entity.js';
 import type { UserRepository } from '../users/user.repository.js';
@@ -11,6 +12,7 @@ export interface SessionServiceDependencies {
   users: UserRepository;
   hasher: PasswordHasher;
   tokens: TokenService;
+  notifications: NotificationPublisher;
   now: () => Date;
 }
 
@@ -44,6 +46,10 @@ export class SessionService {
 
     if (!scope) {
       throw invalidCredentials();
+    }
+
+    if (scope === 'password-change') {
+      await this.dependencies.notifications.publish(user.id, 'temporary-login');
     }
 
     return {

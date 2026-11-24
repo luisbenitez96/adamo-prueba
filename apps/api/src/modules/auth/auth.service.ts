@@ -1,6 +1,7 @@
 import type { EmailSender } from '../../shared/email/email-sender.js';
 import type { PasswordGenerator } from '../../shared/security/password-generator.js';
 import type { PasswordHasher } from '../../shared/security/password-hasher.js';
+import type { NotificationPublisher } from '../notifications/notification-publisher.js';
 import { DuplicateEmailError } from '../users/duplicate-email-error.js';
 import type { User } from '../users/user.entity.js';
 import type { UserRepository } from '../users/user.repository.js';
@@ -13,6 +14,7 @@ export interface AuthServiceDependencies {
   hasher: PasswordHasher;
   passwordGenerator: PasswordGenerator;
   emailSender: EmailSender;
+  notifications: NotificationPublisher;
   now: () => Date;
   tempPasswordTtlMs: number;
   requestCooldownMs: number;
@@ -54,6 +56,7 @@ export class AuthService {
     await this.dependencies.emailSender.send(
       buildPasswordResetEmail({ to: user.email, ...this.emailData(credentials) }),
     );
+    await this.dependencies.notifications.publish(user.id, 'temporary-password-requested');
   }
 
   private async createAccount(email: string): Promise<void> {
@@ -69,6 +72,7 @@ export class AuthService {
     await this.dependencies.emailSender.send(
       buildWelcomeEmail({ to: user.email, ...this.emailData(credentials) }),
     );
+    await this.dependencies.notifications.publish(user.id, 'account-created');
   }
 
   private async issueTemporaryCredentials(): Promise<TemporaryCredentials> {

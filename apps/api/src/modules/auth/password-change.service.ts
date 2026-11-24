@@ -2,6 +2,7 @@ import { AppError } from '../../shared/errors/app-error.js';
 import { InvalidSessionError } from '../../shared/errors/invalid-session-error.js';
 import type { PasswordHasher } from '../../shared/security/password-hasher.js';
 import type { TokenScope, TokenService } from '../../shared/security/token-service.js';
+import type { NotificationPublisher } from '../notifications/notification-publisher.js';
 import { PASSWORD_HISTORY_SIZE, rememberedPasswordHistory } from '../users/password-history.js';
 import { activeTemporaryPasswordHash } from '../users/temporary-password.js';
 import type { UserRepository } from '../users/user.repository.js';
@@ -11,6 +12,7 @@ export interface PasswordChangeServiceDependencies {
   users: UserRepository;
   hasher: PasswordHasher;
   tokens: TokenService;
+  notifications: NotificationPublisher;
   now: () => Date;
 }
 
@@ -18,7 +20,7 @@ export class PasswordChangeService {
   constructor(private readonly dependencies: PasswordChangeServiceDependencies) {}
 
   async changePassword(userId: string, scope: TokenScope, newPassword: string): Promise<Session> {
-    const { users, hasher, tokens, now } = this.dependencies;
+    const { users, hasher, tokens, notifications, now } = this.dependencies;
 
     if (scope !== 'password-change') {
       throw new AppError(403, 'PASSWORD_CHANGE_NOT_REQUIRED', 'Tu contraseña ya está definida');
@@ -67,6 +69,8 @@ export class PasswordChangeService {
     if (!updatedUser) {
       throw new InvalidSessionError();
     }
+
+    await notifications.publish(updatedUser.id, 'password-changed');
 
     return {
       token: tokens.sign({ sub: updatedUser.id, scope: 'full' }),

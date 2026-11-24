@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AppError } from '../../shared/errors/app-error.js';
 import { BcryptPasswordHasher } from '../../shared/security/bcrypt-password-hasher.js';
 import { JwtTokenService } from '../../shared/security/jwt-token-service.js';
+import { RecordingNotificationPublisher } from '../../test/recording-notification-publisher.js';
 import { ManualClock } from '../../test/manual-clock.js';
 import type { User } from '../users/user.entity.js';
 import type { UserRepository } from '../users/user.repository.js';
@@ -33,6 +34,7 @@ function buildService(user: User | null) {
     users: repositoryReturning(user),
     hasher,
     tokens: new JwtTokenService('un-secreto-de-pruebas-suficientemente-largo', 3600),
+    notifications: new RecordingNotificationPublisher(),
     now: new ManualClock().now,
   });
   return { service, hasher };

@@ -134,6 +134,9 @@ async function main() {
   const unauthorizedSummary = await browser.request('GET', '/api/summary');
   record('sin sesión, el resumen responde 401', unauthorizedSummary.status === 401);
 
+  const unauthorizedNotifications = await browser.request('GET', '/api/notifications');
+  record('sin sesión, las notificaciones responden 401', unauthorizedNotifications.status === 401);
+
   const register = await browser.request('POST', '/api/auth/register', { email });
   record('crear cuenta responde 202', register.status === 202);
 
@@ -288,6 +291,31 @@ async function main() {
 
   const unknownService = await browser.request('GET', '/api/services/no-existe/clients');
   record('un servicio que no existe responde 404', unknownService.status === 404);
+
+  const notifications = await browser.request('GET', '/api/notifications');
+  const types = notifications.json?.notifications?.map((item) => item.type);
+  record(
+    'la campana tiene las 3 notificaciones del recorrido (bienvenida, clave temporal y cambio de contraseña), las más recientes primero',
+    JSON.stringify(types) ===
+      JSON.stringify(['password-changed', 'temporary-login', 'account-created']) &&
+      notifications.json.unreadCount === 3,
+    JSON.stringify(types),
+  );
+
+  const firstNotification = notifications.json.notifications[0];
+  const markOne = await browser.request('POST', `/api/notifications/${firstNotification.id}/read`);
+  const afterMarkOne = await browser.request('GET', '/api/notifications');
+  record(
+    'marcar una notificación como leída baja el contador a 2',
+    markOne.status === 204 && afterMarkOne.json?.unreadCount === 2,
+  );
+
+  const markAll = await browser.request('POST', '/api/notifications/read');
+  const afterMarkAll = await browser.request('GET', '/api/notifications');
+  record(
+    'marcar todas como leídas deja el contador en 0',
+    markAll.status === 204 && afterMarkAll.json?.unreadCount === 0,
+  );
 
   const logout = await browser.request('POST', '/api/auth/logout');
   record('cerrar sesión responde 204', logout.status === 204);

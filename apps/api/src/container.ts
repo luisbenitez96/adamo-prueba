@@ -6,6 +6,8 @@ import { PasswordChangeService } from './modules/auth/password-change.service.js
 import { SessionCookie } from './modules/auth/session-cookie.js';
 import { SessionService } from './modules/auth/session.service.js';
 import { MongoClientRepository } from './modules/clients/mongo-client.repository.js';
+import { MongoNotificationRepository } from './modules/notifications/mongo-notification.repository.js';
+import { NotificationService } from './modules/notifications/notification.service.js';
 import { SummaryService } from './modules/summary/summary.service.js';
 import { CatalogService } from './modules/services/catalog.service.js';
 import { MongoServiceRepository } from './modules/services/mongo-service.repository.js';
@@ -44,23 +46,33 @@ export function createAppDependencies(env: Env): AppDependencies {
   const sessionMinutes = env.JWT_EXPIRES_IN_MINUTES;
   const tokenService = new JwtTokenService(env.JWT_SECRET, sessionMinutes * SECONDS_PER_MINUTE);
 
+  const notificationService = new NotificationService(new MongoNotificationRepository(), now);
+
   const authService = new AuthService({
     users,
     hasher,
     passwordGenerator: new RandomPasswordGenerator(),
     emailSender: createEmailSender(env),
+    notifications: notificationService,
     now,
     tempPasswordTtlMs: env.TEMP_PASSWORD_TTL_MINUTES * MILLISECONDS_PER_MINUTE,
     requestCooldownMs: REQUEST_COOLDOWN_MS,
     loginUrl: `${env.APP_URL}/login`,
   });
 
-  const sessionService = new SessionService({ users, hasher, tokens: tokenService, now });
+  const sessionService = new SessionService({
+    users,
+    hasher,
+    tokens: tokenService,
+    notifications: notificationService,
+    now,
+  });
 
   const passwordChangeService = new PasswordChangeService({
     users,
     hasher,
     tokens: tokenService,
+    notifications: notificationService,
     now,
   });
 
@@ -79,6 +91,7 @@ export function createAppDependencies(env: Env): AppDependencies {
     passwordChangeService,
     catalogService: new CatalogService(serviceRepository, clientRepository),
     summaryService: new SummaryService(serviceRepository, clientRepository),
+    notificationService,
     tokenService,
     sessionCookie,
     accountRateLimit: ACCOUNT_RATE_LIMIT,

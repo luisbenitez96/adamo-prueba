@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BcryptPasswordHasher } from '../../shared/security/bcrypt-password-hasher.js';
 import { RandomPasswordGenerator } from '../../shared/security/random-password-generator.js';
+import { RecordingNotificationPublisher } from '../../test/recording-notification-publisher.js';
 import { InMemoryEmailSender } from '../../test/in-memory-email-sender.js';
 import { ManualClock } from '../../test/manual-clock.js';
 import { DuplicateEmailError } from '../users/duplicate-email-error.js';
@@ -23,6 +24,7 @@ describe('AuthService.register', () => {
       hasher: new BcryptPasswordHasher(4),
       passwordGenerator: new RandomPasswordGenerator(),
       emailSender,
+      notifications: new RecordingNotificationPublisher(),
       now: new ManualClock().now,
       tempPasswordTtlMs: 900_000,
       requestCooldownMs: 60_000,
@@ -47,6 +49,7 @@ describe('AuthService.register', () => {
       hasher: new BcryptPasswordHasher(4),
       passwordGenerator: new RandomPasswordGenerator(),
       emailSender: new InMemoryEmailSender(),
+      notifications: new RecordingNotificationPublisher(),
       now: new ManualClock().now,
       tempPasswordTtlMs: 900_000,
       requestCooldownMs: 60_000,
