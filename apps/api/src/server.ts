@@ -1,8 +1,14 @@
 import { createApp } from './app.js';
 import { parseEnv } from './config/env.js';
+import { createAppDependencies } from './container.js';
+import { connectDatabase } from './database/connect-database.js';
 
 const env = parseEnv();
-const app = createApp();
+
+await connectDatabase(env.MONGO_URI);
+console.log('Conectado a MongoDB');
+
+const app = createApp(createAppDependencies(env));
 
 const server = app.listen(env.PORT, () => {
   console.log(`API escuchando en el puerto ${env.PORT} (${env.NODE_ENV})`);
