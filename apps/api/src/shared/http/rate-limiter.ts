@@ -5,12 +5,18 @@ import { AppError } from '../errors/app-error.js';
 export interface RateLimitOptions {
   windowMs: number;
   limit: number;
+  skipSuccessfulRequests?: boolean;
 }
 
-export function createRateLimiter({ windowMs, limit }: RateLimitOptions): RequestHandler {
+export function createRateLimiter({
+  windowMs,
+  limit,
+  skipSuccessfulRequests = false,
+}: RateLimitOptions): RequestHandler {
   return rateLimit({
     windowMs,
     limit,
+    skipSuccessfulRequests,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     handler: (_req, _res, next) => {

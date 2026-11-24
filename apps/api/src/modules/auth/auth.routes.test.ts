@@ -247,7 +247,9 @@ describe('rutas de autenticación', () => {
 
   describe('límite de solicitudes por IP', () => {
     it('responde 429 al pasar el límite y no envía más correos', async () => {
-      const { app, emailSender } = createTestApp({ authRateLimit: { windowMs: 60_000, limit: 2 } });
+      const { app, emailSender } = createTestApp({
+        accountRateLimit: { windowMs: 60_000, limit: 2 },
+      });
 
       await request(app).post('/api/auth/register').send({ email: 'uno@correo.com' });
       await request(app).post('/api/auth/forgot-password').send({ email: 'uno@correo.com' });
@@ -261,7 +263,7 @@ describe('rutas de autenticación', () => {
     });
 
     it('cuenta juntas las solicitudes de register y forgot-password', async () => {
-      const { app } = createTestApp({ authRateLimit: { windowMs: 60_000, limit: 1 } });
+      const { app } = createTestApp({ accountRateLimit: { windowMs: 60_000, limit: 1 } });
 
       await request(app).post('/api/auth/register').send({ email: 'uno@correo.com' });
       const blocked = await request(app)
