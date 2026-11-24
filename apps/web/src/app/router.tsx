@@ -6,8 +6,9 @@ import { ChangePasswordPage } from '../features/auth/pages/change-password-page'
 import { ForgotPasswordPage } from '../features/auth/pages/forgot-password-page';
 import { LoginPage } from '../features/auth/pages/login-page';
 import { RegisterPage } from '../features/auth/pages/register-page';
-import { DashboardPage } from '../features/dashboard/pages/dashboard-page';
+import { ClientsPage } from '../features/dashboard/pages/clients-page';
 import { AuthLayout } from '../layouts/auth-layout';
+import { DashboardLayout } from '../layouts/dashboard-layout';
 import { createRouteLoaders } from './route-loaders';
 import type { RouteLoaders } from './route-loaders';
 import { RouteErrorPage } from './route-error-page';
@@ -44,10 +45,11 @@ export function createAppRoutes(loaders: RouteLoaders): RouteObject[] {
         { path: '/', element: <Navigate to={ROUTES.login} replace /> },
         ...createAuthRoutes(loaders),
         {
-          path: ROUTES.dashboard,
-          loader: loaders.fullAccess,
+          element: <DashboardLayout />,
           HydrateFallback: FullScreenLoading,
-          element: <DashboardPage />,
+          children: [
+            { path: ROUTES.dashboard, loader: loaders.fullAccess, element: <ClientsPage /> },
+          ],
         },
         { path: '*', element: <Navigate to={ROUTES.login} replace /> },
       ],

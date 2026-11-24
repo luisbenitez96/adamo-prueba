@@ -6,7 +6,7 @@ export const buttonStyles = cva(
     variants: {
       size: {
         md: 'h-12 px-5 text-base',
-        sm: 'h-10 px-4 text-sm',
+        sm: 'h-10 px-2.5 text-sm',
       },
       fullWidth: {
         true: 'w-full',

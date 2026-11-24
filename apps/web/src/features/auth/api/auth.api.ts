@@ -22,6 +22,10 @@ export const authApi = {
     return sessionSchema.parse(await http.post('/api/auth/change-password', values));
   },
 
+  async logout(): Promise<void> {
+    await http.post('/api/auth/logout');
+  },
+
   async register(email: string): Promise<void> {
     await http.post('/api/auth/register', { email });
   },
