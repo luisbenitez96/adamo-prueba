@@ -28,3 +28,15 @@ export function formatRange(page: number, pageSize: number, total: number): stri
 
   return `${number.format(first)}–${number.format(last)} de ${formatClientsCount(total)}`;
 }
+
+export function formatCount(count: number): string {
+  return clientsNumberFormat.format(count);
+}
+
+export function formatShare(count: number, total: number): string {
+  if (total === 0) {
+    return '0 %';
+  }
+
+  return `${Math.round((count / total) * 100)} %`;
+}

@@ -131,6 +131,9 @@ async function main() {
   );
   record('sin sesión, el listado de clientes responde 401', unauthorizedClients.status === 401);
 
+  const unauthorizedSummary = await browser.request('GET', '/api/summary');
+  record('sin sesión, el resumen responde 401', unauthorizedSummary.status === 401);
+
   const register = await browser.request('POST', '/api/auth/register', { email });
   record('crear cuenta responde 202', register.status === 202);
 
@@ -268,6 +271,20 @@ async function main() {
 
   const tooBig = await browser.request('GET', `/api/services/${pay.id}/clients?pageSize=101`);
   record('un tamaño de página mayor a 100 se rechaza con 400', tooBig.status === 400);
+
+  const summary = await browser.request('GET', '/api/summary');
+  const { totalClients, totalServices, clientsByStatus } = summary.json?.summary ?? {};
+  const statusTotal = clientsByStatus
+    ? clientsByStatus.active + clientsByStatus.pending + clientsByStatus.inactive
+    : -1;
+  record(
+    'el resumen de Inicio cuenta los 16.769 clientes y 4 servicios, y el desglose por estado suma el total',
+    summary.status === 200 &&
+      totalClients === 16769 &&
+      totalServices === 4 &&
+      statusTotal === 16769,
+    JSON.stringify(summary.json?.summary),
+  );
 
   const unknownService = await browser.request('GET', '/api/services/no-existe/clients');
   record('un servicio que no existe responde 404', unknownService.status === 404);

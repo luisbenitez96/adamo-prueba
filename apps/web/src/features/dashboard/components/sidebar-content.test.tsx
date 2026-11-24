@@ -11,7 +11,7 @@ const LOGOUT_PATH = '*/api/auth/logout';
 
 async function openDashboard() {
   mockSession({ ...FULL_SESSION, email: 'luis@correo.com' });
-  const rendered = await renderApp(ROUTES.dashboard);
+  const rendered = await renderApp(ROUTES.clients);
   await screen.findByRole('heading', { level: 1, name: 'Clientes' });
   return { ...rendered, sidebar: within(screen.getByRole('complementary')) };
 }
@@ -28,7 +28,7 @@ describe('SidebarContent', () => {
 
     const nav = sidebar.getByRole('navigation', { name: 'Principal' });
     expect(within(nav).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(nav).getByRole('button', { name: 'Inicio' })).toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'Inicio' })).toHaveAttribute('href', ROUTES.home);
     expect(within(nav).getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
   });
 
@@ -38,13 +38,25 @@ describe('SidebarContent', () => {
     expect(sidebar.getByRole('link', { name: 'Clientes' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('Inicio y Mi perfil se anuncian como no disponibles', async () => {
+  it('en Clientes, Inicio no se marca como la página actual', async () => {
     const { sidebar } = await openDashboard();
 
-    expect(sidebar.getByRole('button', { name: 'Inicio' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    expect(sidebar.getByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('en Inicio, solo Inicio se marca como la página actual', async () => {
+    mockSession({ ...FULL_SESSION, email: 'luis@correo.com' });
+    await renderApp(ROUTES.home);
+    await screen.findByRole('heading', { level: 1, name: 'Inicio' });
+    const sidebar = within(screen.getByRole('complementary'));
+
+    expect(sidebar.getByRole('link', { name: 'Inicio' })).toHaveAttribute('aria-current', 'page');
+    expect(sidebar.getByRole('link', { name: 'Clientes' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('Mi perfil se anuncia como no disponible', async () => {
+    const { sidebar } = await openDashboard();
+
     expect(sidebar.getByRole('button', { name: /Mi perfil/ })).toHaveAttribute(
       'aria-disabled',
       'true',
@@ -157,7 +169,7 @@ describe('SidebarContent', () => {
         'aria-busy',
         'true',
       );
-      expect(router.state.location.pathname).toBe(ROUTES.dashboard);
+      expect(router.state.location.pathname).toBe(ROUTES.clients);
       await screen.findByRole('heading', { name: 'Inicia sesión en tu cuenta de AdamoServices' });
     });
 
@@ -170,7 +182,7 @@ describe('SidebarContent', () => {
       expect(await sidebar.findByRole('alert')).toHaveTextContent(
         'Tuvimos un problema en el servidor',
       );
-      expect(router.state.location.pathname).toBe(ROUTES.dashboard);
+      expect(router.state.location.pathname).toBe(ROUTES.clients);
       expect(sidebar.getByRole('button', { name: 'Cerrar sesión' })).toBeEnabled();
     });
 

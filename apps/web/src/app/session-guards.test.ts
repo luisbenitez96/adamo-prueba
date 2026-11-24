@@ -24,7 +24,7 @@ describe('requireGuest (pantallas para quien no ha iniciado sesión)', () => {
   it('con sesión completa envía al dashboard', async () => {
     mockSession(FULL_SESSION);
 
-    expect(destinationOf(await newGuards().requireGuest())).toBe(ROUTES.dashboard);
+    expect(destinationOf(await newGuards().requireGuest())).toBe(ROUTES.home);
   });
 
   it('con sesión pendiente de cambio de contraseña envía a cambiarla', async () => {
@@ -42,7 +42,7 @@ describe('requirePasswordChange (pantalla de cambiar contraseña)', () => {
   it('con sesión completa envía al dashboard: ya no hay nada que cambiar', async () => {
     mockSession(FULL_SESSION);
 
-    expect(destinationOf(await newGuards().requirePasswordChange())).toBe(ROUTES.dashboard);
+    expect(destinationOf(await newGuards().requirePasswordChange())).toBe(ROUTES.home);
   });
 
   it('con sesión pendiente de cambio deja pasar', async () => {

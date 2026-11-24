@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import type { HydratedDocument } from 'mongoose';
-import type { ClientItem, NewClient } from './client.entity.js';
+import { CLIENT_STATUSES } from './client.entity.js';
+import type { ClientItem, ClientStatus, NewClient } from './client.entity.js';
 import { ClientModel } from './client.model.js';
 import type { ClientDocument } from './client.model.js';
 import type { ClientPage, ClientPageQuery, ClientRepository } from './client.repository.js';
@@ -43,6 +44,17 @@ export class MongoClientRepository implements ClientRepository {
     ]);
 
     return new Map(groups.map((group) => [group._id.toString(), group.count]));
+  }
+
+  async countByStatus(): Promise<Record<ClientStatus, number>> {
+    const groups = await ClientModel.aggregate<{ _id: ClientStatus; count: number }>([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]);
+    const counts = new Map(groups.map((group) => [group._id, group.count]));
+
+    return Object.fromEntries(
+      CLIENT_STATUSES.map((status) => [status, counts.get(status) ?? 0]),
+    ) as Record<ClientStatus, number>;
   }
 
   countForService(serviceId: string): Promise<number> {

@@ -4,6 +4,7 @@ import { PasswordChangeService } from '../modules/auth/password-change.service.j
 import { SessionCookie } from '../modules/auth/session-cookie.js';
 import { SessionService } from '../modules/auth/session.service.js';
 import { MongoClientRepository } from '../modules/clients/mongo-client.repository.js';
+import { SummaryService } from '../modules/summary/summary.service.js';
 import { CatalogService } from '../modules/services/catalog.service.js';
 import { MongoServiceRepository } from '../modules/services/mongo-service.repository.js';
 import { MongoUserRepository } from '../modules/users/mongo-user.repository.js';
@@ -78,6 +79,7 @@ export function createTestApp({
     sessionService,
     passwordChangeService,
     catalogService: new CatalogService(serviceRepository, clientRepository),
+    summaryService: new SummaryService(serviceRepository, clientRepository),
     tokenService,
     sessionCookie,
     accountRateLimit,

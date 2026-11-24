@@ -55,7 +55,7 @@ describe('ServiceClientsPage', () => {
       expect(screen.getByRole('heading', { level: 1, name: 'Clientes' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Volver a servicios' })).toHaveAttribute(
         'href',
-        ROUTES.dashboard,
+        ROUTES.clients,
       );
     });
 
@@ -325,7 +325,7 @@ describe('ServiceClientsPage', () => {
     });
 
     it('mantiene el spinner el tiempo mínimo aunque el servidor responda al instante', async () => {
-      vi.stubEnv('VITE_MIN_LOADING_MS', '200');
+      vi.stubEnv('VITE_MIN_LOADING_MS', '1500');
       mockSession(FULL_SESSION);
 
       await renderApp(serviceClientsPath(PAY.id));
@@ -470,15 +470,13 @@ describe('ServiceClientsPage', () => {
   describe('desde las tarjetas', () => {
     it('"Gestionar clientes" abre la lista de ese servicio', async () => {
       mockSession(FULL_SESSION);
-      const { router } = await renderApp(ROUTES.dashboard);
+      const { router } = await renderApp(ROUTES.clients);
       const cards = await screen.findAllByRole('article');
 
       await userEvent.click(within(cards[1]!).getByRole('link', { name: /Gestionar clientes/ }));
 
       await waitFor(() =>
-        expect(router.state.location.pathname).toBe(
-          `${ROUTES.dashboard}/${DESIGN_SERVICES[1]!.id}`,
-        ),
+        expect(router.state.location.pathname).toBe(`${ROUTES.clients}/${DESIGN_SERVICES[1]!.id}`),
       );
       expect(await screen.findByRole('table')).toBeInTheDocument();
     });
@@ -488,7 +486,7 @@ describe('ServiceClientsPage', () => {
 
       await userEvent.click(screen.getByRole('link', { name: 'Volver a servicios' }));
 
-      await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.dashboard));
+      await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.clients));
       expect(await screen.findAllByRole('article')).toHaveLength(4);
     });
   });

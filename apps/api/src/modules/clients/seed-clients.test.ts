@@ -83,6 +83,7 @@ describe('seedClients', () => {
         inserts++;
       },
       countByService: repository.countByService.bind(repository),
+      countByStatus: repository.countByStatus.bind(repository),
       findPage: repository.findPage.bind(repository),
     };
 

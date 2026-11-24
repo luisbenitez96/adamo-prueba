@@ -33,7 +33,7 @@ export function renderRoute(path: string) {
   return renderRoutes(
     [
       ...createAuthRoutes(createRouteLoaders(queryClient)),
-      { path: ROUTES.dashboard, element: <p>Destino: dashboard</p> },
+      { path: ROUTES.home, element: <p>Destino: dashboard</p> },
     ],
     path,
     queryClient,

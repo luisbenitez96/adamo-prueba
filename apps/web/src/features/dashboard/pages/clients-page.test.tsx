@@ -12,7 +12,7 @@ const SERVICES_PATH = '*/api/services';
 
 async function openDashboard() {
   mockSession(FULL_SESSION);
-  const rendered = await renderApp(ROUTES.dashboard);
+  const rendered = await renderApp(ROUTES.clients);
   await screen.findByRole('heading', { level: 1, name: 'Clientes' });
   return rendered;
 }
@@ -182,7 +182,7 @@ describe('ClientsPage', () => {
         http.get(SERVICES_PATH, () => apiError(401, 'UNAUTHENTICATED', 'x')),
       );
 
-      const { router } = await renderApp(ROUTES.dashboard);
+      const { router } = await renderApp(ROUTES.clients);
 
       expect(
         await screen.findByRole('heading', { name: 'Inicia sesión en tu cuenta de AdamoServices' }),
@@ -199,7 +199,7 @@ describe('ClientsPage', () => {
         http.get(SERVICES_PATH, () => apiError(403, 'PASSWORD_CHANGE_REQUIRED', 'x')),
       );
 
-      const { router } = await renderApp(ROUTES.dashboard);
+      const { router } = await renderApp(ROUTES.clients);
 
       expect(
         await screen.findByRole('heading', { name: 'Actualiza tu contraseña' }),

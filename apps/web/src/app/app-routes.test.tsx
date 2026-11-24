@@ -13,7 +13,8 @@ const TITLES = {
   register: 'Crea tu cuenta en AdamoServices',
   forgot: 'Recupera tu contraseña',
   change: 'Actualiza tu contraseña',
-  dashboard: 'Clientes',
+  dashboard: 'Inicio',
+  clients: 'Clientes',
 };
 
 describe('rutas de la aplicación según la sesión', () => {
@@ -24,26 +25,14 @@ describe('rutas de la aplicación según la sesión', () => {
     ['sin sesión', ROUTES.register, ROUTES.register, TITLES.register, null],
     ['sin sesión', ROUTES.forgotPassword, ROUTES.forgotPassword, TITLES.forgot, null],
     ['sin sesión', ROUTES.changePassword, ROUTES.login, TITLES.login, null],
-    ['sin sesión', ROUTES.dashboard, ROUTES.login, TITLES.login, null],
-    ['con sesión completa', '/', ROUTES.dashboard, TITLES.dashboard, FULL_SESSION],
-    ['con sesión completa', '/esto/no/existe', ROUTES.dashboard, TITLES.dashboard, FULL_SESSION],
-    ['con sesión completa', ROUTES.login, ROUTES.dashboard, TITLES.dashboard, FULL_SESSION],
-    ['con sesión completa', ROUTES.register, ROUTES.dashboard, TITLES.dashboard, FULL_SESSION],
-    [
-      'con sesión completa',
-      ROUTES.forgotPassword,
-      ROUTES.dashboard,
-      TITLES.dashboard,
-      FULL_SESSION,
-    ],
-    [
-      'con sesión completa',
-      ROUTES.changePassword,
-      ROUTES.dashboard,
-      TITLES.dashboard,
-      FULL_SESSION,
-    ],
-    ['con sesión completa', ROUTES.dashboard, ROUTES.dashboard, TITLES.dashboard, FULL_SESSION],
+    ['sin sesión', ROUTES.clients, ROUTES.login, TITLES.login, null],
+    ['con sesión completa', '/', ROUTES.home, TITLES.dashboard, FULL_SESSION],
+    ['con sesión completa', '/esto/no/existe', ROUTES.home, TITLES.dashboard, FULL_SESSION],
+    ['con sesión completa', ROUTES.login, ROUTES.home, TITLES.dashboard, FULL_SESSION],
+    ['con sesión completa', ROUTES.register, ROUTES.home, TITLES.dashboard, FULL_SESSION],
+    ['con sesión completa', ROUTES.forgotPassword, ROUTES.home, TITLES.dashboard, FULL_SESSION],
+    ['con sesión completa', ROUTES.changePassword, ROUTES.home, TITLES.dashboard, FULL_SESSION],
+    ['con sesión completa', ROUTES.clients, ROUTES.clients, TITLES.clients, FULL_SESSION],
     ['con contraseña temporal', '/', ROUTES.changePassword, TITLES.change, TEMPORARY_SESSION],
     [
       'con contraseña temporal',
@@ -68,7 +57,7 @@ describe('rutas de la aplicación según la sesión', () => {
     ],
     [
       'con contraseña temporal',
-      ROUTES.dashboard,
+      ROUTES.clients,
       ROUTES.changePassword,
       TITLES.change,
       TEMPORARY_SESSION,
@@ -111,7 +100,7 @@ describe('si no se puede comprobar la sesión', () => {
   it('sin conexión explica que no pudo conectar', async () => {
     server.use(http.get('*/api/auth/me', () => HttpResponse.error()));
 
-    await renderApp(ROUTES.dashboard);
+    await renderApp(ROUTES.clients);
 
     expect(await screen.findByText(/No pudimos conectar con el servidor/)).toBeInTheDocument();
   });
@@ -162,7 +151,7 @@ describe('recorrido completo', () => {
     await user.click(screen.getByRole('button', { name: 'Actualizar contraseña' }));
 
     expect(await screen.findByRole('heading', { name: TITLES.dashboard })).toBeInTheDocument();
-    await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.dashboard));
+    await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.home));
   });
 
   it('una vez en el dashboard, volver atrás no regresa al formulario de cambiar contraseña', async () => {
@@ -180,6 +169,6 @@ describe('recorrido completo', () => {
 
     await router.navigate(-1);
 
-    await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.dashboard));
+    await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.home));
   });
 });

@@ -117,7 +117,7 @@ describe('LoginPage', () => {
       await user.click(submitButton());
 
       await screen.findByText('Destino: dashboard');
-      expect(router.state.location.pathname).toBe(ROUTES.dashboard);
+      expect(router.state.location.pathname).toBe(ROUTES.home);
     });
 
     it('lleva a cambiar la contraseña cuando entró con la temporal', async () => {

@@ -32,7 +32,7 @@ export function LoginPage() {
   const submit = handleSubmit((values) => {
     login.mutate(values, {
       onSuccess: ({ requiresPasswordChange }) => {
-        navigate(requiresPasswordChange ? ROUTES.changePassword : ROUTES.dashboard, {
+        navigate(requiresPasswordChange ? ROUTES.changePassword : ROUTES.home, {
           replace: true,
         });
       },

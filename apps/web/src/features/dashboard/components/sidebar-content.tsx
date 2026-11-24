@@ -17,10 +17,12 @@ export function SidebarContent() {
         <nav aria-label="Principal" className={sidebarContentStyles.nav}>
           <ul className={sidebarContentStyles.list}>
             <li>
-              <NavItem icon={House}>Inicio</NavItem>
+              <NavItem icon={House} to={ROUTES.home} end>
+                Inicio
+              </NavItem>
             </li>
             <li>
-              <NavItem icon={CircleUser} to={ROUTES.dashboard}>
+              <NavItem icon={CircleUser} to={ROUTES.clients}>
                 Clientes
               </NavItem>
             </li>

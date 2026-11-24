@@ -6,10 +6,11 @@ import { navItemIconStyles, navItemStyles } from './nav-item.styles';
 interface NavItemProps {
   icon: LucideIcon;
   to?: string;
+  end?: boolean;
   children: ReactNode;
 }
 
-export function NavItem({ icon: Icon, to, children }: NavItemProps) {
+export function NavItem({ icon: Icon, to, end = false, children }: NavItemProps) {
   const content = (
     <>
       <Icon strokeWidth={1.5} className={navItemIconStyles} />
@@ -26,7 +27,7 @@ export function NavItem({ icon: Icon, to, children }: NavItemProps) {
   }
 
   return (
-    <NavLink to={to} className={({ isActive }) => navItemStyles({ active: isActive })}>
+    <NavLink to={to} end={end} className={({ isActive }) => navItemStyles({ active: isActive })}>
       {content}
     </NavLink>
   );

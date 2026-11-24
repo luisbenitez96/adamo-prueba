@@ -12,6 +12,9 @@ import { SessionController } from './modules/auth/session.controller.js';
 import type { SessionCookie } from './modules/auth/session-cookie.js';
 import type { SessionService } from './modules/auth/session.service.js';
 import { healthRouter } from './modules/health/health.routes.js';
+import { SummaryController } from './modules/summary/summary.controller.js';
+import type { SummaryService } from './modules/summary/summary.service.js';
+import { createSummaryRouter } from './modules/summary/summary.routes.js';
 import { CatalogController } from './modules/services/catalog.controller.js';
 import type { CatalogService } from './modules/services/catalog.service.js';
 import { createServicesRouter } from './modules/services/services.routes.js';
@@ -25,6 +28,7 @@ export interface AppDependencies {
   sessionService: SessionService;
   passwordChangeService: PasswordChangeService;
   catalogService: CatalogService;
+  summaryService: SummaryService;
   tokenService: TokenService;
   sessionCookie: SessionCookie;
   accountRateLimit: RateLimitOptions;
@@ -64,6 +68,14 @@ export function createApp(dependencies: AppDependencies): Express {
     '/api/services',
     createServicesRouter({
       catalogController: new CatalogController(dependencies.catalogService),
+      authenticate,
+    }),
+  );
+
+  app.use(
+    '/api/summary',
+    createSummaryRouter({
+      summaryController: new SummaryController(dependencies.summaryService),
       authenticate,
     }),
   );

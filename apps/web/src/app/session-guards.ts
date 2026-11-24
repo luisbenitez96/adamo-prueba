@@ -7,7 +7,7 @@ import { ROUTES } from './routes';
 export type SessionGuard = () => Promise<Response | null>;
 
 function destinationFor(session: Session): string {
-  return session.requiresPasswordChange ? ROUTES.changePassword : ROUTES.dashboard;
+  return session.requiresPasswordChange ? ROUTES.changePassword : ROUTES.home;
 }
 
 export function createSessionGuards(queryClient: QueryClient) {
@@ -25,7 +25,7 @@ export function createSessionGuards(queryClient: QueryClient) {
       return redirect(ROUTES.login);
     }
 
-    return session.requiresPasswordChange ? null : redirect(ROUTES.dashboard);
+    return session.requiresPasswordChange ? null : redirect(ROUTES.home);
   };
 
   const requireFullAccess: SessionGuard = async () => {

@@ -104,6 +104,38 @@ describe('MongoClientRepository', () => {
     });
   });
 
+  describe('countByStatus', () => {
+    it('cuenta los clientes de cada estado, sumando todos los servicios', async () => {
+      await repository.insertMany([
+        namedClient('Uno', { status: 'active' }),
+        namedClient('Dos', { status: 'active' }),
+        namedClient('Tres', { status: 'pending' }),
+        namedClient('Cuatro', { status: 'inactive', serviceId: SERVICE_B }),
+        namedClient('Cinco', { status: 'active', serviceId: SERVICE_B }),
+      ]);
+
+      expect(await repository.countByStatus()).toEqual({ active: 3, pending: 1, inactive: 1 });
+    });
+
+    it('un estado sin clientes aparece en cero', async () => {
+      await repository.insertMany([namedClient('Uno', { status: 'pending' })]);
+
+      expect(await repository.countByStatus()).toEqual({ active: 0, pending: 1, inactive: 0 });
+    });
+
+    it('sin clientes todo está en cero', async () => {
+      expect(await repository.countByStatus()).toEqual({ active: 0, pending: 0, inactive: 0 });
+    });
+
+    it('coincide con el total de clientes sembrados', async () => {
+      await repository.insertMany(clientsOf(SERVICE_A, 'Adamo Pay', 200));
+
+      const counts = await repository.countByStatus();
+
+      expect(counts.active + counts.pending + counts.inactive).toBe(200);
+    });
+  });
+
   describe('findPage', () => {
     it('devuelve la primera página y el total del servicio', async () => {
       await repository.insertMany(clientsOf(SERVICE_A, 'Adamo Pay', 45));

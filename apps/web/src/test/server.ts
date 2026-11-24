@@ -40,6 +40,16 @@ export const servicesHandler = http.get('*/api/services', () =>
   HttpResponse.json({ services: DESIGN_SERVICES }),
 );
 
+export const DESIGN_SUMMARY = {
+  totalClients: 16769,
+  totalServices: 4,
+  clientsByStatus: { active: 11738, pending: 3354, inactive: 1677 },
+};
+
+export const summaryHandler = http.get('*/api/summary', () =>
+  HttpResponse.json({ summary: DESIGN_SUMMARY }),
+);
+
 const STATUSES = ['active', 'pending', 'inactive'] as const;
 
 export function fakeClient(index: number) {
@@ -89,6 +99,7 @@ export const logoutHandler = http.post(
 export const server = setupServer(
   noSessionHandler,
   servicesHandler,
+  summaryHandler,
   createClientsHandler(),
   logoutHandler,
 );

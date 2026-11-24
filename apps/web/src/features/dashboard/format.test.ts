@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatClientsCount, formatRange, formatRegistrationDate } from './format';
+import {
+  formatClientsCount,
+  formatCount,
+  formatRange,
+  formatRegistrationDate,
+  formatShare,
+} from './format';
 
 describe('formatClientsCount', () => {
   it.each([
@@ -46,5 +52,29 @@ describe('formatRange', () => {
 
   it('sin clientes lo dice', () => {
     expect(formatRange(1, 20, 0)).toBe('0 clientes');
+  });
+});
+
+describe('formatCount', () => {
+  it('usa punto como separador de miles', () => {
+    expect(formatCount(16769)).toBe('16.769');
+    expect(formatCount(793)).toBe('793');
+    expect(formatCount(0)).toBe('0');
+  });
+});
+
+describe('formatShare', () => {
+  it('calcula el porcentaje redondeado', () => {
+    expect(formatShare(7, 10)).toBe('70 %');
+    expect(formatShare(1, 3)).toBe('33 %');
+    expect(formatShare(2, 3)).toBe('67 %');
+  });
+
+  it('el total completo es 100 %', () => {
+    expect(formatShare(5, 5)).toBe('100 %');
+  });
+
+  it('sin total no divide entre cero', () => {
+    expect(formatShare(0, 0)).toBe('0 %');
   });
 });

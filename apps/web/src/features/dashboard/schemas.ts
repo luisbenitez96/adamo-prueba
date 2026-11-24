@@ -46,3 +46,19 @@ export const clientsPageSchema = z.object({
 export type Client = z.infer<typeof clientSchema>;
 export type ClientStatus = Client['status'];
 export type ClientsPage = z.infer<typeof clientsPageSchema>;
+
+const nonNegativeInteger = z.number().int().min(0);
+
+export const summarySchema = z.object({
+  totalClients: nonNegativeInteger,
+  totalServices: nonNegativeInteger,
+  clientsByStatus: z.object({
+    active: nonNegativeInteger,
+    pending: nonNegativeInteger,
+    inactive: nonNegativeInteger,
+  }),
+});
+
+export const summaryResponseSchema = z.object({ summary: summarySchema });
+
+export type Summary = z.infer<typeof summarySchema>;

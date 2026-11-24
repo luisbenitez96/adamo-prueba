@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from '../features/auth/pages/forgot-password-page'
 import { LoginPage } from '../features/auth/pages/login-page';
 import { RegisterPage } from '../features/auth/pages/register-page';
 import { ClientsPage } from '../features/dashboard/pages/clients-page';
+import { HomePage } from '../features/dashboard/pages/home-page';
 import { ServiceClientsPage } from '../features/dashboard/pages/service-clients-page';
 import { AuthLayout } from '../layouts/auth-layout';
 import { DashboardLayout } from '../layouts/dashboard-layout';
@@ -49,7 +50,8 @@ export function createAppRoutes(loaders: RouteLoaders): RouteObject[] {
           element: <DashboardLayout />,
           HydrateFallback: FullScreenLoading,
           children: [
-            { path: ROUTES.dashboard, loader: loaders.fullAccess, element: <ClientsPage /> },
+            { path: ROUTES.home, loader: loaders.fullAccess, element: <HomePage /> },
+            { path: ROUTES.clients, loader: loaders.fullAccess, element: <ClientsPage /> },
             {
               path: ROUTES.serviceClients,
               loader: loaders.fullAccess,

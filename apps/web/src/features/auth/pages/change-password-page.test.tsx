@@ -168,7 +168,7 @@ describe('ChangePasswordPage', () => {
       await user.click(submitButton());
 
       await screen.findByText('Destino: dashboard');
-      expect(router.state.location.pathname).toBe(ROUTES.dashboard);
+      expect(router.state.location.pathname).toBe(ROUTES.home);
     });
 
     it('permite enviar con la tecla Enter', async () => {

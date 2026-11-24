@@ -9,7 +9,7 @@ import { server } from '../test/server';
 
 async function openDashboard() {
   mockSession({ ...FULL_SESSION, email: 'ana@correo.com' });
-  const rendered = await renderApp(ROUTES.dashboard);
+  const rendered = await renderApp(ROUTES.clients);
   await screen.findByRole('heading', { level: 1, name: 'Clientes' });
   return rendered;
 }
@@ -66,7 +66,7 @@ describe('DashboardLayout', () => {
       await openDashboard();
 
       const nav = within(mobileNav());
-      expect(nav.getByRole('button', { name: 'Inicio' })).toBeInTheDocument();
+      expect(nav.getByRole('link', { name: 'Inicio' })).toBeInTheDocument();
       expect(nav.getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
       expect(nav.getByRole('button', { name: 'Más' })).toBeInTheDocument();
     });
@@ -81,16 +81,29 @@ describe('DashboardLayout', () => {
       expect(mobileNav()).toHaveAttribute('data-active-tab', 'clients');
     });
 
-    it('Inicio se anuncia como no disponible y no cambia de pantalla', async () => {
+    it('en Clientes, la pestaña Inicio no se marca como la página actual', async () => {
+      await openDashboard();
+
+      expect(within(mobileNav()).getByRole('link', { name: 'Inicio' })).not.toHaveAttribute(
+        'aria-current',
+      );
+    });
+
+    it('Inicio lleva a la pantalla de inicio y pasa a ser la pestaña activa', async () => {
       const { router } = await openDashboard();
 
-      await userEvent.click(within(mobileNav()).getByRole('button', { name: 'Inicio' }));
+      await userEvent.click(within(mobileNav()).getByRole('link', { name: 'Inicio' }));
 
-      expect(within(mobileNav()).getByRole('button', { name: 'Inicio' })).toHaveAttribute(
-        'aria-disabled',
-        'true',
+      await waitFor(() => expect(router.state.location.pathname).toBe(ROUTES.home));
+      expect(await screen.findByRole('heading', { level: 1, name: 'Inicio' })).toBeInTheDocument();
+      expect(within(mobileNav()).getByRole('link', { name: 'Inicio' })).toHaveAttribute(
+        'aria-current',
+        'page',
       );
-      expect(router.state.location.pathname).toBe(ROUTES.dashboard);
+      expect(within(mobileNav()).getByRole('link', { name: 'Clientes' })).not.toHaveAttribute(
+        'aria-current',
+      );
+      expect(mobileNav()).toHaveAttribute('data-active-tab', 'home');
     });
 
     it('la hoja "Más" empieza cerrada: inerte para el teclado y los lectores de pantalla', async () => {

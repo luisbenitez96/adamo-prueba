@@ -8,7 +8,7 @@ import { ProfileButton } from '../features/dashboard/components/profile-button';
 import { bottomNavStyles, tabStyles } from './bottom-nav.styles';
 import { MoreSheet } from './more-sheet';
 
-type ActiveTab = 'none' | 'clients' | 'more';
+type ActiveTab = 'none' | 'home' | 'clients' | 'more';
 
 export function BottomNav() {
   const session = useSession();
@@ -16,11 +16,14 @@ export function BottomNav() {
   const sheetId = useId();
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const onClients = useMatch({ path: ROUTES.dashboard, end: false }) !== null;
+  const onHome = useMatch({ path: ROUTES.home, end: true }) !== null;
+  const onClients = useMatch({ path: ROUTES.clients, end: false }) !== null;
 
   let activeTab: ActiveTab = 'none';
   if (moreOpen) {
     activeTab = 'more';
+  } else if (onHome) {
+    activeTab = 'home';
   } else if (onClients) {
     activeTab = 'clients';
   }
@@ -62,12 +65,16 @@ export function BottomNav() {
           <div aria-hidden="true" className={bottomNavStyles.indicator}>
             <span className={bottomNavStyles.pill} />
           </div>
-          <button type="button" aria-disabled="true" className={tabStyles()}>
+          <NavLink
+            to={ROUTES.home}
+            end
+            className={({ isActive }) => tabStyles({ active: isActive })}
+          >
             <House strokeWidth={1.5} className={bottomNavStyles.icon} />
             <span className={bottomNavStyles.label}>Inicio</span>
-          </button>
+          </NavLink>
           <NavLink
-            to={ROUTES.dashboard}
+            to={ROUTES.clients}
             className={({ isActive }) => tabStyles({ active: isActive })}
           >
             <CircleUser strokeWidth={1.5} className={bottomNavStyles.icon} />

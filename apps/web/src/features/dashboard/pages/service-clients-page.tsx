@@ -69,7 +69,7 @@ export function ServiceClientsPage() {
     <>
       <PageHeader title="Clientes" />
       <section aria-label="Clientes del servicio" className={styles.panel}>
-        <Link to={ROUTES.dashboard} className={styles.back}>
+        <Link to={ROUTES.clients} className={styles.back}>
           <ArrowLeft aria-hidden="true" className={styles.backIcon} />
           Volver a servicios
         </Link>

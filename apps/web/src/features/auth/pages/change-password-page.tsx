@@ -45,7 +45,7 @@ export function ChangePasswordPage() {
 
   const submit = handleSubmit((values) => {
     changePassword.mutate(values, {
-      onSuccess: () => navigate(ROUTES.dashboard, { replace: true }),
+      onSuccess: () => navigate(ROUTES.home, { replace: true }),
     });
   });
 
