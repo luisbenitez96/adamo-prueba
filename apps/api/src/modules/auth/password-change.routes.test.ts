@@ -126,6 +126,18 @@ describe('POST /api/auth/change-password', () => {
       expect(replay.body.error.code).toBe('TEMPORARY_PASSWORD_EXPIRED');
     });
 
+    it('tras cambiarla, la sesión temporal anterior deja de ser válida también para consultar al usuario', async () => {
+      const { agent, app, temporaryToken } = await startTemporarySession();
+      await agent.post('/api/auth/change-password').send(validBody);
+
+      const response = await request(app)
+        .get('/api/auth/me')
+        .set('Cookie', `${TEST_COOKIE_NAME}=${temporaryToken}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('INVALID_TOKEN');
+    });
+
     it('si la contraseña temporal venció mientras tanto, pide solicitar una nueva', async () => {
       const { agent, clock, users } = await startTemporarySession();
       clock.advance(TEST_TEMP_PASSWORD_TTL_MS + 1000);

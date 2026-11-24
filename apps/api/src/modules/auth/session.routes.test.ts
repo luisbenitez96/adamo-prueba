@@ -351,6 +351,48 @@ describe('rutas de sesión', () => {
       expect(response.body).toEqual({ email: EMAIL, requiresPasswordChange: true });
     });
 
+    it('si la contraseña temporal venció, la sesión pendiente de cambio deja de ser válida', async () => {
+      const { app, emailSender, clock } = createTestApp();
+      await request(app).post('/api/auth/register').send({ email: EMAIL });
+      const agent = request.agent(app);
+      await agent
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: extractTemporaryPassword(emailSender.sent[0]!) });
+
+      clock.advance(TEST_TEMP_PASSWORD_TTL_MS + 1000);
+      const response = await agent.get('/api/auth/me');
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('INVALID_TOKEN');
+    });
+
+    it('la sesión pendiente de cambio sigue válida justo antes de que venza la temporal', async () => {
+      const { app, emailSender, clock } = createTestApp();
+      await request(app).post('/api/auth/register').send({ email: EMAIL });
+      const agent = request.agent(app);
+      await agent
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: extractTemporaryPassword(emailSender.sent[0]!) });
+
+      clock.advance(TEST_TEMP_PASSWORD_TTL_MS - 1000);
+      const response = await agent.get('/api/auth/me');
+
+      expect(response.status).toBe(200);
+      expect(response.body.requiresPasswordChange).toBe(true);
+    });
+
+    it('una sesión de acceso completo no depende de ninguna contraseña temporal', async () => {
+      const { app, clock } = await createAppWithUser();
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
+
+      clock.advance(TEST_TEMP_PASSWORD_TTL_MS * 10);
+      const response = await agent.get('/api/auth/me');
+
+      expect(response.status).toBe(200);
+      expect(response.body.requiresPasswordChange).toBe(false);
+    });
+
     it('si el usuario ya no existe, la sesión deja de ser válida', async () => {
       const { app } = await createAppWithUser();
       const agent = request.agent(app);

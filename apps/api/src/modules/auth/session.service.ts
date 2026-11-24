@@ -60,7 +60,15 @@ export class SessionService {
       throw new InvalidSessionError();
     }
 
-    return { email: user.email, requiresPasswordChange: scope === 'password-change' };
+    const requiresPasswordChange = scope === 'password-change';
+    const hasActiveTemporaryPassword =
+      activeTemporaryPasswordHash(user, this.dependencies.now()) !== null;
+
+    if (requiresPasswordChange && !hasActiveTemporaryPassword) {
+      throw new InvalidSessionError();
+    }
+
+    return { email: user.email, requiresPasswordChange };
   }
 
   private async resolveScope(user: User, password: string): Promise<TokenScope | null> {
