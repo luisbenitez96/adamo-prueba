@@ -64,7 +64,7 @@ describe('ForgotPasswordPage', () => {
       expect(received).toEqual([{ email: EMAIL }]);
     });
 
-    it('confirma sin revelar si el correo está registrado', async () => {
+    it('confirma el envío nombrando el correo y devuelve el foco al título', async () => {
       mockPost(FORGOT_PATH, () => HttpResponse.json({}, { status: 202 }));
       const user = userEvent.setup();
       await renderRoute(ROUTES.forgotPassword);
@@ -73,7 +73,9 @@ describe('ForgotPasswordPage', () => {
       await user.click(submitButton());
 
       expect(await screen.findByRole('heading', { name: 'Revisa tu correo' })).toHaveFocus();
-      expect(screen.getByText(/Si el correo está registrado/)).toBeInTheDocument();
+      expect(
+        screen.getByText(new RegExp(`Te enviamos una contraseña temporal a ${EMAIL}`)),
+      ).toBeInTheDocument();
       expect(screen.queryByLabelText('Correo electrónico')).toBeNull();
     });
 
@@ -91,6 +93,61 @@ describe('ForgotPasswordPage', () => {
   });
 
   describe('errores', () => {
+    it('si no existe una cuenta con ese correo, lo avisa debajo del campo y no confirma el envío', async () => {
+      mockPost(FORGOT_PATH, () =>
+        apiError(404, 'ACCOUNT_NOT_FOUND', 'No encontramos una cuenta con este correo'),
+      );
+      const user = userEvent.setup();
+      await renderRoute(ROUTES.forgotPassword);
+
+      await user.type(emailField(), EMAIL);
+      await user.click(submitButton());
+
+      expect(
+        await screen.findByText('No encontramos una cuenta con este correo'),
+      ).toBeInTheDocument();
+      expect(emailField()).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getAllByRole('alert')).toHaveLength(1);
+      expect(screen.queryByRole('heading', { name: 'Revisa tu correo' })).toBeNull();
+      expect(submitButton()).toBeEnabled();
+    });
+
+    it('tras ese aviso se puede corregir el correo y volver a intentarlo con éxito', async () => {
+      let calls = 0;
+      mockPost(FORGOT_PATH, () => {
+        calls += 1;
+        return calls === 1
+          ? apiError(404, 'ACCOUNT_NOT_FOUND', 'No encontramos una cuenta con este correo')
+          : HttpResponse.json({}, { status: 202 });
+      });
+      const user = userEvent.setup();
+      await renderRoute(ROUTES.forgotPassword);
+      await user.type(emailField(), 'mal@correo.com');
+      await user.click(submitButton());
+      await screen.findByText('No encontramos una cuenta con este correo');
+
+      await user.clear(emailField());
+      await user.type(emailField(), EMAIL);
+      await user.click(submitButton());
+
+      expect(await screen.findByRole('heading', { name: 'Revisa tu correo' })).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(EMAIL))).toBeInTheDocument();
+    });
+
+    it('el aviso de cuenta inexistente no sale como alerta general del formulario', async () => {
+      mockPost(FORGOT_PATH, () =>
+        apiError(404, 'ACCOUNT_NOT_FOUND', 'No encontramos una cuenta con este correo'),
+      );
+      const user = userEvent.setup();
+      await renderRoute(ROUTES.forgotPassword);
+
+      await user.type(emailField(), EMAIL);
+      await user.click(submitButton());
+
+      const alert = await screen.findByRole('alert');
+      expect(alert.id).toBe(`${emailField().id}-error`);
+    });
+
     it('con demasiados intentos muestra el aviso del servidor', async () => {
       mockPost(FORGOT_PATH, () =>
         apiError(429, 'TOO_MANY_REQUESTS', 'Demasiados intentos, inténtalo más tarde'),
@@ -158,6 +215,14 @@ describe('ForgotPasswordPage', () => {
 
     await screen.findByRole('heading', { name: 'Revisa tu correo' });
     expect(requests).toBe(1);
+  });
+
+  it('"Crear cuenta" lleva a crear la cuenta, por si el correo no existía', async () => {
+    const { router } = await renderRoute(ROUTES.forgotPassword);
+
+    await userEvent.click(screen.getByRole('link', { name: 'Crear cuenta' }));
+
+    expect(router.state.location.pathname).toBe(ROUTES.register);
   });
 
   it('"Inicia sesión" lleva al login', async () => {

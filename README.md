@@ -80,7 +80,7 @@ Lo que hice fue exactamente lo que pide la prueba: el usuario pone su correo, re
 
 Otros caminos que vale la pena probar:
 
-- Si olvidas la contraseña, en el login está el texto "¿Olvidaste tu contraseña? Haz click aquí". Pide una temporal nueva a tu correo y llega a la misma bandeja.
+- Si olvidas la contraseña, en el login está el texto "¿Olvidaste tu contraseña? Haz click aquí". Pide una temporal nueva a tu correo y llega a la misma bandeja. Si escribes un correo que no tiene cuenta, la pantalla te lo dice debajo del campo ("No encontramos una cuenta con este correo") y te ofrece crear una.
 - Si intentas crear una cuenta con un correo que ya existe, el error sale justo debajo del campo ("Este correo ya está registrado") y no se manda ningún correo.
 - Si escribes mal la contraseña, sale un error genérico que no dice si el fallo fue el correo o la contraseña.
 - Puedes redimensionar la ventana o abrirlo en el celular: es responsive. En pantallas chicas el menú lateral se convierte en una barra de navegación abajo, con Inicio, Clientes y Más.
@@ -196,7 +196,7 @@ npm run format:check  # formato
 
 Las de la API usan una base MongoDB real en memoria (`mongodb-memory-server`), así que no necesitas tener Mongo instalado para correrlas, y se prueba el flujo completo por HTTP. Las del front usan Testing Library y MSW para simular la API. Además de escribirlas, comprobé que de verdad fallan: fui rompiendo el código a propósito (cambiando una condición, quitando una validación, etc.) y verifiqué que alguna prueba se pusiera en rojo cada vez.
 
-También hay una prueba de humo que recorre el sistema ya levantado con Docker, igual que lo haría una persona: crea una cuenta, lee la contraseña temporal de Mailpit, entra, la cambia, revisa el dashboard y las notificaciones, y cierra sesión. Son 37 comprobaciones. Con el sistema corriendo:
+También hay una prueba de humo que recorre el sistema ya levantado con Docker, igual que lo haría una persona: crea una cuenta, lee la contraseña temporal de Mailpit, entra, la cambia, revisa el dashboard y las notificaciones, y cierra sesión. Son 39 comprobaciones. Con el sistema corriendo:
 
 ```
 npm run smoke
@@ -212,7 +212,7 @@ Estas son las cosas que no vienen en el enunciado y que quiero que sepan que las
 - El token trae un alcance: `password-change` cuando entraste con la temporal y `full` cuando ya definiste tu contraseña. La API rechaza cualquier ruta del dashboard si el alcance no es `full` (responde 403). No es solo el front el que te bloquea: aunque alguien se saltara la pantalla, el backend no le entrega datos.
 - Pedir una contraseña temporal no borra tu contraseña actual. La temporal se guarda aparte, vence a los 15 minutos y se gasta al usarla. Lo hice así porque "olvidé mi contraseña" solo pide el correo; si invalidara la contraseña actual, cualquiera podría dejar fuera a otra persona con solo escribir su correo. Cuando entras con la temporal y la cambias, ahí sí la anterior deja de servir.
 - No se pueden reutilizar contraseñas: la nueva no puede ser la temporal, la actual ni ninguna de las 5 anteriores. Se guardan solo los hashes.
-- Para no revelar qué correos existen, "Recuperar contraseña" responde siempre lo mismo, exista o no el correo. La excepción es "Crear cuenta": ahí sí avisa que el correo ya está registrado, porque así lo pidió el flujo (el mensaje sale debajo del campo, sin enviar correo). Es una decisión de usabilidad que tiene su costo, y prefiero decirlo.
+- Si un correo no tiene cuenta, "Recuperar contraseña" lo dice claro ("No encontramos una cuenta con este correo") en vez de fingir que todo salió bien, y "Crear cuenta" avisa cuando el correo ya existe. Es mejor para quien usa la aplicación, y la contrapartida es que alguien podría averiguar qué correos están registrados. Para limitarlo, estas dos pantallas tienen límite de solicitudes por IP (más abajo). En un producto con datos sensibles lo pensaría de nuevo.
 - Límites contra abuso: máximo 20 solicitudes de crear cuenta o recuperar por IP cada 15 minutos, máximo 10 intentos fallidos de login por IP cada 15 minutos, y una sola temporal por correo por minuto.
 - Las contraseñas se guardan con bcrypt, las temporales se generan con `crypto.randomInt` (no con `Math.random`) y la API usa `helmet`. nginx agrega cabeceras de seguridad (CSP, `X-Frame-Options`, `nosniff`).
 - Todas las cargas muestran un spinner que dura al menos un tiempo mínimo (500 ms en datos, 300 ms al cambiar de pantalla). Así se percibe que algo está pasando y no hay parpadeos cuando el servidor responde demasiado rápido.
@@ -237,21 +237,21 @@ En el front, el código está por funcionalidad (`features/auth`, `features/dash
 
 Todos responden JSON. Los de la última fila requieren sesión con alcance `full`.
 
-| Método | Ruta                          | Qué hace                                                                 |
-| ------ | ----------------------------- | ------------------------------------------------------------------------ |
-| GET    | `/api/health`                 | Estado de la API                                                         |
-| POST   | `/api/auth/register`          | Crea la cuenta y envía la contraseña temporal                            |
-| POST   | `/api/auth/forgot-password`   | Envía una contraseña temporal nueva                                      |
-| POST   | `/api/auth/login`             | Inicia sesión (cookie)                                                   |
-| GET    | `/api/auth/me`                | Dice si hay sesión. Siempre responde 200                                 |
-| POST   | `/api/auth/change-password`   | Cambia la contraseña (solo con sesión de contraseña temporal)            |
-| POST   | `/api/auth/logout`            | Cierra sesión                                                            |
-| GET    | `/api/services`               | Los servicios con su cantidad de clientes                                |
-| GET    | `/api/services/:id/clients`   | Clientes de un servicio. Admite `page`, `pageSize` (máx. 100) y `search` |
-| GET    | `/api/summary`                | Totales para la pantalla de Inicio                                       |
-| GET    | `/api/notifications`          | Las últimas 20 notificaciones y cuántas están sin leer                   |
-| POST   | `/api/notifications/read`     | Marca todas como leídas                                                  |
-| POST   | `/api/notifications/:id/read` | Marca una como leída                                                     |
+| Método | Ruta                          | Qué hace                                                                          |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------- |
+| GET    | `/api/health`                 | Estado de la API                                                                  |
+| POST   | `/api/auth/register`          | Crea la cuenta y envía la contraseña temporal                                     |
+| POST   | `/api/auth/forgot-password`   | Envía una contraseña temporal nueva. Responde 404 si no hay cuenta con ese correo |
+| POST   | `/api/auth/login`             | Inicia sesión (cookie)                                                            |
+| GET    | `/api/auth/me`                | Dice si hay sesión. Siempre responde 200                                          |
+| POST   | `/api/auth/change-password`   | Cambia la contraseña (solo con sesión de contraseña temporal)                     |
+| POST   | `/api/auth/logout`            | Cierra sesión                                                                     |
+| GET    | `/api/services`               | Los servicios con su cantidad de clientes                                         |
+| GET    | `/api/services/:id/clients`   | Clientes de un servicio. Admite `page`, `pageSize` (máx. 100) y `search`          |
+| GET    | `/api/summary`                | Totales para la pantalla de Inicio                                                |
+| GET    | `/api/notifications`          | Las últimas 20 notificaciones y cuántas están sin leer                            |
+| POST   | `/api/notifications/read`     | Marca todas como leídas                                                           |
+| POST   | `/api/notifications/:id/read` | Marca una como leída                                                              |
 
 Sobre `/api/auth/me`: responde siempre 200, con `{ "session": null }` cuando no hay sesión. Lo hice así a propósito para que la consola del navegador no se llene de errores rojos 401 cada vez que alguien abre la página sin haber iniciado sesión.
 

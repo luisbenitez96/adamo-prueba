@@ -2,6 +2,7 @@ import type { EmailSender } from '../../shared/email/email-sender.js';
 import type { PasswordGenerator } from '../../shared/security/password-generator.js';
 import type { PasswordHasher } from '../../shared/security/password-hasher.js';
 import type { NotificationPublisher } from '../notifications/notification-publisher.js';
+import { AccountNotFoundError } from '../users/account-not-found-error.js';
 import { DuplicateEmailError } from '../users/duplicate-email-error.js';
 import type { User } from '../users/user.entity.js';
 import type { UserRepository } from '../users/user.repository.js';
@@ -43,7 +44,11 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     const user = await this.dependencies.users.findByEmail(email);
 
-    if (!user || this.isInCooldown(user)) {
+    if (!user) {
+      throw new AccountNotFoundError();
+    }
+
+    if (this.isInCooldown(user)) {
       return;
     }
 

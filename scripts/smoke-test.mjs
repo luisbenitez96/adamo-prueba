@@ -146,6 +146,22 @@ async function main() {
     duplicate.status === 409 && duplicate.json?.error?.code === 'EMAIL_ALREADY_REGISTERED',
   );
 
+  const forgotUnknown = await browser.request('POST', '/api/auth/forgot-password', {
+    email: `no-existe-${Date.now()}@example.com`,
+  });
+  record(
+    'recuperar contraseña con un correo sin cuenta responde 404 ACCOUNT_NOT_FOUND',
+    forgotUnknown.status === 404 && forgotUnknown.json?.error?.code === 'ACCOUNT_NOT_FOUND',
+    String(forgotUnknown.status),
+  );
+
+  const forgotRepeated = await browser.request('POST', '/api/auth/forgot-password', { email });
+  record(
+    'recuperar contraseña de una cuenta existente (dentro del minuto de espera) responde 202, no 404',
+    forgotRepeated.status === 202,
+    String(forgotRepeated.status),
+  );
+
   const temporaryPassword = await waitForTemporaryPassword(email);
   record(
     'la contraseña temporal llega a la bandeja de correo (Mailpit)',

@@ -195,19 +195,23 @@ describe('rutas de autenticación', () => {
       expect(await hasher.verify(second!, user!.tempPasswordHash!)).toBe(true);
     });
 
-    it('con un correo que no existe no crea ninguna cuenta ni envía nada', async () => {
+    it('con un correo que no existe avisa que no hay cuenta, y no crea ninguna ni envía nada', async () => {
       const { app, emailSender } = createTestApp();
 
       const response = await request(app)
         .post('/api/auth/forgot-password')
         .send({ email: 'nadie@correo.com' });
 
-      expect(response.status).toBe(202);
+      expect(response.status).toBe(404);
+      expect(response.body.error).toEqual({
+        code: 'ACCOUNT_NOT_FOUND',
+        message: 'No encontramos una cuenta con este correo',
+      });
       expect(emailSender.sent).toHaveLength(0);
       expect(await UserModel.countDocuments()).toBe(0);
     });
 
-    it('responde exactamente igual para un correo que existe y uno que no', async () => {
+    it('distingue entre un correo que existe (202) y uno que no (404)', async () => {
       const { app, users } = createTestApp();
       await users.create({ email: 'existente@correo.com' });
 
@@ -218,17 +222,32 @@ describe('rutas de autenticación', () => {
         .post('/api/auth/forgot-password')
         .send({ email: 'nadie@correo.com' });
 
-      expect(forMissing.status).toBe(forExisting.status);
-      expect(forMissing.body).toEqual(forExisting.body);
+      expect(forExisting.status).toBe(202);
+      expect(forMissing.status).toBe(404);
     });
 
-    it('no envía otro correo si se repite la solicitud antes del tiempo de espera', async () => {
+    it('encuentra la cuenta sin importar mayúsculas ni espacios en el correo', async () => {
+      const { app, users, emailSender } = createTestApp();
+      await users.create({ email: 'ana@correo.com' });
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: '  ANA@Correo.com ' });
+
+      expect(response.status).toBe(202);
+      expect(emailSender.sent).toHaveLength(1);
+    });
+
+    it('no envía otro correo si se repite la solicitud antes del tiempo de espera, y no la trata como cuenta inexistente', async () => {
       const { app, emailSender, users } = createTestApp();
       await users.create({ email: 'ana@correo.com' });
 
       await request(app).post('/api/auth/forgot-password').send({ email: 'ana@correo.com' });
-      await request(app).post('/api/auth/forgot-password').send({ email: 'ana@correo.com' });
+      const repeated = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'ana@correo.com' });
 
+      expect(repeated.status).toBe(202);
       expect(emailSender.sent).toHaveLength(1);
     });
 
