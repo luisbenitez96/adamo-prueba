@@ -9,21 +9,22 @@ Lo dejé armado para que se pueda probar sin instalar nada más que Docker. Si s
 Solo una cosa: Docker Desktop.
 
 - Descárgalo en https://www.docker.com/products/docker-desktop e instálalo (Mac, Windows o Linux).
-- Ábrelo y espera a que diga que está corriendo (el ícono de la ballena queda quieto, sin animación).
-- Necesitas tener libres los puertos 8080 y 8025 de tu máquina. Si alguno está ocupado, más abajo explico cómo cambiarlo.
+- En Windows, ejecuta el instalador como administrador (clic derecho sobre el instalador, "Ejecutar como administrador") y, cuando te lo pregunte, elige la instalación para todos los usuarios ("All users"). Si no lo haces así, en algunos equipos el instalador se queda sin permisos para terminar. Al acabar puede pedirte reiniciar el equipo; hazlo.
+- Ábrelo y espera a que diga que está corriendo (el ícono de la ballena queda quieto, sin animación). En Windows, abajo a la izquierda de Docker Desktop debe decir "Engine running".
+- Necesitas tener libres los puertos 8080 (la aplicación) y 8025 (la bandeja de correos). Son los que se usan por defecto. Si alguno está ocupado, más abajo explico cómo cambiarlo.
 - Espacio en disco: unos 2 GB entre imágenes y contenedores.
 
 No necesitas instalar Node, ni MongoDB, ni un servidor de correo. Todo eso corre dentro de los contenedores. Tampoco necesitas una cuenta de correo real: los correos que manda la aplicación no salen a internet, llegan a una bandeja de pruebas que también levanta Docker.
 
-Lo desarrollé y probé en un Mac con Apple Silicon. En Windows y Linux debería funcionar igual porque todo corre en contenedores, pero ahí no lo he probado yo.
+Lo desarrollé y probé en un Mac con Apple Silicon, y también lo levanté en un PC con Windows 11 y Docker Desktop, donde los cuatro servicios quedaron en estado `healthy`. En Linux debería funcionar igual porque todo corre en contenedores, pero ahí no lo he probado.
 
 ## Cómo descargarlo y levantarlo
 
 1. Descarga el proyecto. Tienes dos opciones:
    - Con git: `git clone https://github.com/luisbenitez96/adamo-prueba.git`
-   - Sin git: en la página del repositorio en GitHub, botón verde "Code", luego "Download ZIP", y descomprime el archivo.
+   - Sin git: en la página del repositorio en GitHub, botón verde "Code", luego "Download ZIP", y descomprime el archivo. Ojo: al descomprimir en Windows a veces queda una carpeta dentro de otra con el mismo nombre (`adamo-prueba-main\adamo-prueba-main`). Entra hasta la que tiene el archivo `docker-compose.yml` dentro.
 
-2. Abre una terminal dentro de la carpeta del proyecto (la que tiene el archivo `docker-compose.yml`). En Windows puede ser PowerShell. Si no sabes cómo, en Mac y Windows basta con abrir la carpeta, hacer clic derecho y elegir abrir terminal ahí.
+2. Abre una terminal dentro de la carpeta del proyecto (la que tiene el archivo `docker-compose.yml`). En Windows puede ser PowerShell. Si no sabes cómo abrirla ahí: en el Explorador de archivos entra a la carpeta, haz clic en la barra de direcciones de arriba, escribe `powershell` y pulsa Enter. En Mac, abre la app Terminal, escribe `cd ` (con un espacio al final) y arrastra la carpeta a la ventana, luego Enter.
 
 3. Con Docker Desktop ya corriendo, ejecuta:
 
@@ -42,20 +43,47 @@ Lo desarrollé y probé en un Mac con Apple Silicon. En Windows y Linux debería
 
    Si prefieres que la terminal quede libre, usa `docker compose up --build -d` y comprueba el estado con `docker compose ps`: los cuatro servicios (mongo, mailpit, api y web) deben aparecer como `healthy`.
 
-6. Abre http://localhost:8080 en el navegador.
+6. Antes de abrir el navegador, comprueba en qué puertos quedó cada servicio. Abre otra terminal en la misma carpeta (o la misma, si usaste `-d`) y ejecuta:
+
+   ```
+   docker compose ps
+   ```
+
+   Mira la columna de puertos. Si no creaste ningún `.env`, tiene que salir algo así:
+
+   ```
+   mailpit   ...   0.0.0.0:8025->8025/tcp
+   web       ...   0.0.0.0:8080->80/tcp
+   ```
+
+   El número de la izquierda es el que tienes que abrir en el navegador. Si es otro, usa ese. Si los servicios no aparecen o no dicen `healthy`, espera unos segundos y vuelve a ejecutarlo.
+
+7. Abre en el navegador la aplicación en http://localhost:8080 (o el puerto que viste para `web`). La bandeja de correos (Mailpit) está en http://localhost:8025 (o el puerto que viste para `mailpit`). Esos dos números, 8080 y 8025, son los de siempre: solo cambian si tú creas el archivo `.env` de la sección siguiente.
 
 Para parar todo, `Ctrl + C` en esa terminal (o `docker compose down` si lo levantaste con `-d`). Los datos se guardan en un volumen de Docker, así que al volver a levantar siguen ahí. Si quieres empezar totalmente de cero, incluyendo la base de datos, usa `docker compose down -v`.
 
-### Si el puerto 8080 u 8025 está ocupado
+### Solo si el puerto 8080 u 8025 está ocupado
 
-Docker te va a decir algo como "port is already allocated". Crea un archivo llamado `.env` (con ese nombre exacto, sin nada más) al lado del `docker-compose.yml` con estas líneas, cambiando los números por puertos libres:
+Esto no es un paso obligatorio. Hazlo únicamente si Docker te dice algo como "port is already allocated" o "Bind for 0.0.0.0:8080 failed: port is already allocated".
+
+Crea un archivo llamado `.env` (con ese nombre exacto) en la misma carpeta que el `docker-compose.yml`, con estas dos líneas. Los números son un ejemplo: pon los de dos puertos que tengas libres.
 
 ```
 WEB_PORT=8081
 MAILPIT_PORT=8026
 ```
 
-Vuelve a ejecutar `docker compose up --build`. A partir de ahí la aplicación queda en http://localhost:8081 y la bandeja de correos en http://localhost:8026. Los enlaces dentro de los correos también se ajustan solos.
+Después ejecuta otra vez `docker compose up --build`. Con ese ejemplo, la aplicación queda en http://localhost:8081 y la bandeja de correos en http://localhost:8026. Los enlaces dentro de los correos también se ajustan solos.
+
+Para comprobar en qué puertos quedó cada servicio, ejecuta `docker compose ps` y mira la columna de puertos: por ejemplo `0.0.0.0:8080->80/tcp` quiere decir que la web está en el 8080.
+
+En Windows hay una trampa frecuente: si creas el archivo con el Bloc de notas, se guarda como `.env.txt` (Windows esconde las extensiones) y Docker no lo lee, así que todo queda en los puertos de siempre. Para evitarlo, créalo desde PowerShell, dentro de la carpeta del proyecto:
+
+```
+"WEB_PORT=8081","MAILPIT_PORT=8026" | Set-Content -Encoding ascii .env
+```
+
+Puedes comprobar que quedó bien con `Get-ChildItem -Force`: tiene que aparecer `.env` y no `.env.txt`.
 
 ## Cómo probar el flujo completo
 
@@ -259,6 +287,8 @@ Sobre `/api/auth/me`: responde siempre 200, con `{ "session": null }` cuando no 
 
 - "Cannot connect to the Docker daemon" o algo parecido: Docker Desktop no está abierto. Ábrelo, espera a que arranque y repite el comando.
 - "port is already allocated": un puerto está ocupado. Mira la parte de arriba sobre cómo cambiar `WEB_PORT` y `MAILPIT_PORT`.
+- Chrome dice "localhost rechazó la conexión" (`ERR_CONNECTION_REFUSED`): no hay nada escuchando en el puerto que abriste. Ejecuta `docker compose ps` y abre el puerto que salga en la columna de puertos: si no creaste un `.env`, son http://localhost:8080 (aplicación) y http://localhost:8025 (correos). El consejo de Chrome sobre desactivar la detección automática del proxy no tiene nada que ver con esto y no hace falta tocarlo.
+- El instalador de Docker Desktop falla o se queda sin permisos en Windows: ejecútalo como administrador y elige la instalación para todos los usuarios.
 - "docker: 'compose' is not a command": tienes una versión muy vieja de Docker. Con Docker Desktop actual viene incluido; si usas la versión antigua, el comando es `docker-compose` con guion, pero lo mejor es actualizar.
 - La página abre pero dice "No pudimos cargar la aplicación": la API todavía está arrancando o falló. Espera unos segundos y pulsa "Reintentar". Si sigue igual, mira los registros con `docker compose logs api`.
 - No llega el correo con la contraseña: no sale a ningún correo real. Búscalo en la bandeja de Mailpit, en http://localhost:8025 (o el puerto que hayas puesto en `MAILPIT_PORT`). Si pasó más de un minuto desde la última solicitud para ese correo y aun así no llega, vuelve a pedirla; solo se envía una por minuto.
