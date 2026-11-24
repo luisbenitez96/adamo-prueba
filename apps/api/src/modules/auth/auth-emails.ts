@@ -1,3 +1,9 @@
+import {
+  createEmailLogoAttachment,
+  EMAIL_LOGO_CID,
+  EMAIL_LOGO_HEIGHT,
+  EMAIL_LOGO_WIDTH,
+} from '../../shared/email/email-logo.js';
 import type { EmailMessage } from '../../shared/email/email-sender.js';
 
 interface TemporaryPasswordEmailData {
@@ -14,7 +20,9 @@ interface EmailContent {
   details: string[];
 }
 
-const PARAGRAPH_STYLE = 'margin:0 0 16px;color:#4b5563';
+const PAGE_BACKGROUND = '#f3f4f6';
+const BRAND_COLOR = '#111927';
+const PARAGRAPH_STYLE = 'margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.5';
 const HIGHLIGHT_STYLE =
   'margin:0 0 16px;padding:12px 16px;background:#f3f4f6;border-radius:8px;font-family:monospace;font-size:18px;color:#232a38';
 
@@ -22,22 +30,35 @@ function renderText({ heading, intro, highlight, details }: EmailContent): strin
   return [heading, intro, highlight, ...details].filter(Boolean).join('\n\n');
 }
 
+function renderLogo(): string {
+  return `<img src="cid:${EMAIL_LOGO_CID}" alt="AdamoServices" width="${EMAIL_LOGO_WIDTH}" height="${EMAIL_LOGO_HEIGHT}" style="display:block;border:0;margin:0 auto" />`;
+}
+
 function renderHtml({ heading, intro, highlight, details }: EmailContent): string {
   const paragraph = (content: string) => `<p style="${PARAGRAPH_STYLE}">${content}</p>`;
   const highlightBlock = highlight ? `<p style="${HIGHLIGHT_STYLE}">${highlight}</p>` : '';
 
   return [
-    '<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">',
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAGE_BACKGROUND};padding:24px 0;font-family:Arial,sans-serif"><tr><td align="center">`,
+    '<table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;background:#ffffff;border-radius:12px;overflow:hidden">',
+    `<tr><td align="center" style="background:${BRAND_COLOR};padding:28px 0">${renderLogo()}</td></tr>`,
+    '<tr><td style="padding:28px 32px">',
     `<h1 style="margin:0 0 16px;font-size:20px;color:#232a38">${heading}</h1>`,
     paragraph(intro),
     highlightBlock,
     ...details.map(paragraph),
-    '</div>',
+    '</td></tr></table></td></tr></table>',
   ].join('');
 }
 
 function buildMessage(to: string, subject: string, content: EmailContent): EmailMessage {
-  return { to, subject, text: renderText(content), html: renderHtml(content) };
+  return {
+    to,
+    subject,
+    text: renderText(content),
+    html: renderHtml(content),
+    attachments: [createEmailLogoAttachment()],
+  };
 }
 
 function temporaryPasswordDetails({

@@ -32,6 +32,35 @@ describe.each([
     expect(email.text).toContain('http://localhost:8080/login');
     expect(email.html).toContain('http://localhost:8080/login');
   });
+
+  it('muestra el logo de AdamoServices arriba, incrustado en el mismo correo', () => {
+    expect(email.html).toContain('<img src="cid:adamo-logo"');
+    expect(email.html).toContain('alt="AdamoServices"');
+    expect(email.html.indexOf('<img')).toBeLessThan(email.html.indexOf('<h1'));
+  });
+
+  it('adjunta el logo con el mismo identificador que usa el HTML', () => {
+    expect(email.attachments).toHaveLength(1);
+    expect(email.attachments![0]).toMatchObject({
+      cid: 'adamo-logo',
+      contentType: 'image/png',
+      filename: 'adamo-logo.png',
+    });
+    expect(email.html).toContain(`cid:${email.attachments![0]!.cid}`);
+  });
+
+  it('el logo va sobre la banda del color de la marca, porque el logo es blanco', () => {
+    expect(email.html).toMatch(/background:#111927[^>]*>\s*<img/);
+  });
+
+  it('la versión en texto plano no menciona el logo ni etiquetas', () => {
+    expect(email.text).not.toContain('<');
+    expect(email.text).not.toContain('cid:');
+  });
+
+  it('el HTML usa tablas, que es lo que entienden todos los clientes de correo', () => {
+    expect(email.html).toContain('<table role="presentation"');
+  });
 });
 
 describe('correos con asuntos distintos', () => {

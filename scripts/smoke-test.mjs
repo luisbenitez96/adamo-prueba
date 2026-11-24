@@ -78,6 +78,13 @@ async function waitForTemporaryPassword(email) {
   return null;
 }
 
+async function findMessageDetail(email) {
+  const list = await (await fetch(`${MAILPIT_URL}/api/v1/messages`)).json();
+  const message = list.messages?.find((item) => item.To?.some((to) => to.Address === email));
+
+  return message ? (await fetch(`${MAILPIT_URL}/api/v1/message/${message.ID}`)).json() : null;
+}
+
 async function main() {
   const email = `smoke-${Date.now()}@correo.com`;
   const browser = new Browser();
@@ -170,6 +177,24 @@ async function main() {
   if (!temporaryPassword) {
     return;
   }
+
+  const welcome = await findMessageDetail(email);
+  const logo = welcome?.Inline?.find((part) => part.ContentID === 'adamo-logo');
+  record(
+    'el correo trae el logo incrustado como imagen PNG y el HTML lo muestra',
+    Boolean(logo) && logo.ContentType === 'image/png' && welcome.HTML.includes('cid:adamo-logo'),
+    JSON.stringify(welcome?.Inline),
+  );
+
+  const logoFile = logo
+    ? await fetch(`${MAILPIT_URL}/api/v1/message/${welcome.ID}/part/${logo.PartID}`)
+    : null;
+  const logoBytes = logoFile ? Buffer.from(await logoFile.arrayBuffer()) : Buffer.alloc(0);
+  record(
+    'la imagen del logo se puede descargar de la bandeja y es un PNG válido',
+    logoFile?.status === 200 && logoBytes.subarray(1, 4).toString() === 'PNG',
+    String(logoFile?.status),
+  );
 
   const wrong = await browser.request('POST', '/api/auth/login', {
     email,

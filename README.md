@@ -167,7 +167,7 @@ Son datos inventados, no hay nadie real ahí. Los nombres y las ciudades son de 
 
 ## El correo
 
-La aplicación envía los correos por SMTP con Nodemailer. En el `docker-compose.yml` el servidor SMTP es Mailpit, que atrapa todo lo que se envía y lo muestra en una bandeja web (http://localhost:8025). Elegí eso para que quien pruebe no tenga que configurar una cuenta de Gmail ni nada parecido.
+La aplicación envía los correos por SMTP con Nodemailer. En el `docker-compose.yml` el servidor SMTP es Mailpit, que atrapa todo lo que se envía y lo muestra en una bandeja web (http://localhost:8025). Elegí eso para que quien pruebe no tenga que configurar una cuenta de Gmail ni nada parecido. Los correos llevan el logo de AdamoServices arriba, incrustado dentro del propio mensaje como imagen PNG (los clientes de correo no muestran SVG ni imágenes de localhost), así que se ve igual en Mailpit, Gmail o Outlook sin depender de internet.
 
 Si algún día se quiere usar un SMTP real, solo hay que cambiar las variables `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` y `MAIL_FROM`. El código no cambia, porque el envío está detrás de una interfaz.
 
@@ -224,7 +224,7 @@ npm run format:check  # formato
 
 Las de la API usan una base MongoDB real en memoria (`mongodb-memory-server`), así que no necesitas tener Mongo instalado para correrlas, y se prueba el flujo completo por HTTP. Las del front usan Testing Library y MSW para simular la API. Además de escribirlas, comprobé que de verdad fallan: fui rompiendo el código a propósito (cambiando una condición, quitando una validación, etc.) y verifiqué que alguna prueba se pusiera en rojo cada vez.
 
-También hay una prueba de humo que recorre el sistema ya levantado con Docker, igual que lo haría una persona: crea una cuenta, lee la contraseña temporal de Mailpit, entra, la cambia, revisa el dashboard y las notificaciones, y cierra sesión. Son 39 comprobaciones. Con el sistema corriendo:
+También hay una prueba de humo que recorre el sistema ya levantado con Docker, igual que lo haría una persona: crea una cuenta, lee la contraseña temporal de Mailpit, entra, la cambia, revisa el dashboard y las notificaciones, y cierra sesión. Son 41 comprobaciones. Con el sistema corriendo:
 
 ```
 npm run smoke

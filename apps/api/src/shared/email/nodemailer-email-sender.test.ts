@@ -27,6 +27,45 @@ describe('NodemailerEmailSender', () => {
     });
   });
 
+  it('entrega las imágenes adjuntas en línea con su identificador (cid)', async () => {
+    const transporter = nodemailer.createTransport({ jsonTransport: true });
+    const sendMail = vi.spyOn(transporter, 'sendMail');
+    const sender = new NodemailerEmailSender(transporter, 'no-reply@adamo.local');
+
+    await sender.send({
+      ...message,
+      html: '<img src="cid:adamo-logo">',
+      attachments: [
+        {
+          filename: 'adamo-logo.png',
+          content: Buffer.from('contenido'),
+          contentType: 'image/png',
+          cid: 'adamo-logo',
+        },
+      ],
+    });
+
+    const info = await sendMail.mock.results[0]?.value;
+    const delivered = JSON.parse(info.message);
+    expect(delivered.attachments).toHaveLength(1);
+    expect(delivered.attachments[0]).toMatchObject({
+      filename: 'adamo-logo.png',
+      contentType: 'image/png',
+      cid: 'adamo-logo',
+    });
+  });
+
+  it('sin adjuntos el mensaje se envía igual', async () => {
+    const transporter = nodemailer.createTransport({ jsonTransport: true });
+    const sendMail = vi.spyOn(transporter, 'sendMail');
+    const sender = new NodemailerEmailSender(transporter, 'no-reply@adamo.local');
+
+    await sender.send(message);
+
+    const info = await sendMail.mock.results[0]?.value;
+    expect(JSON.parse(info.message).attachments ?? []).toEqual([]);
+  });
+
   it('propaga el error si el transporte falla', async () => {
     const transporter = nodemailer.createTransport({ jsonTransport: true });
     vi.spyOn(transporter, 'sendMail').mockRejectedValue(new Error('SMTP caído'));
