@@ -10,7 +10,6 @@ const userSchema = new Schema<UserDocument>(
     tempPasswordHash: { type: String, default: null },
     tempPasswordExpiresAt: { type: Date, default: null },
     lastTempRequestAt: { type: Date, default: null },
-    mustChangePassword: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

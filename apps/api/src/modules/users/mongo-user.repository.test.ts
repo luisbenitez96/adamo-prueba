@@ -31,7 +31,6 @@ describe('MongoUserRepository', () => {
         tempPasswordHash: null,
         tempPasswordExpiresAt: null,
         lastTempRequestAt: null,
-        mustChangePassword: false,
       });
       expect(user.id).toEqual(expect.any(String));
       expect(user.createdAt).toBeInstanceOf(Date);
@@ -44,12 +43,10 @@ describe('MongoUserRepository', () => {
         email: 'ana@correo.com',
         tempPasswordHash: 'hash-temporal',
         tempPasswordExpiresAt: expiresAt,
-        mustChangePassword: true,
       });
 
       expect(user.tempPasswordHash).toBe('hash-temporal');
       expect(user.tempPasswordExpiresAt).toEqual(expiresAt);
-      expect(user.mustChangePassword).toBe(true);
     });
 
     it('guarda el correo en minúsculas y sin espacios', async () => {
@@ -62,11 +59,11 @@ describe('MongoUserRepository', () => {
       const user = await repository.create({
         email: 'ana@correo.com',
         passwordHash: undefined,
-        mustChangePassword: undefined,
+        tempPasswordExpiresAt: undefined,
       });
 
       expect(user.passwordHash).toBeNull();
-      expect(user.mustChangePassword).toBe(false);
+      expect(user.tempPasswordExpiresAt).toBeNull();
     });
 
     it('rechaza un correo repetido', async () => {
@@ -133,19 +130,19 @@ describe('MongoUserRepository', () => {
       const created = await repository.create({
         email: 'ana@correo.com',
         tempPasswordHash: 'hash-temporal',
-        mustChangePassword: true,
+        lastTempRequestAt: null,
       });
 
       const updated = await repository.update(created.id, {
         passwordHash: 'hash-definitivo',
-        mustChangePassword: false,
+        lastTempRequestAt: new Date('2030-01-01T00:00:00.000Z'),
       });
 
       expect(updated).toMatchObject({
         email: 'ana@correo.com',
         passwordHash: 'hash-definitivo',
         tempPasswordHash: 'hash-temporal',
-        mustChangePassword: false,
+        lastTempRequestAt: new Date('2030-01-01T00:00:00.000Z'),
       });
     });
 
@@ -176,11 +173,11 @@ describe('MongoUserRepository', () => {
 
       const updated = await repository.update(created.id, {
         passwordHash: undefined,
-        mustChangePassword: true,
+        tempPasswordHash: 'hash-temporal',
       });
 
       expect(updated?.passwordHash).toBe('hash-definitivo');
-      expect(updated?.mustChangePassword).toBe(true);
+      expect(updated?.tempPasswordHash).toBe('hash-temporal');
     });
 
     it('no modifica a otros usuarios', async () => {
