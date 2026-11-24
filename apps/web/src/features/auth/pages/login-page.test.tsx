@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ROUTES } from '../../../app/routes';
-import { apiError, mockPost } from '../../../test/api-handlers';
+import { apiError, mockPost, mockSession, TEMPORARY_SESSION } from '../../../test/api-handlers';
 import { pause } from '../../../test/pause';
 import { renderRoute } from '../../../test/render-route';
 import { server } from '../../../test/server';
@@ -121,14 +121,19 @@ describe('LoginPage', () => {
     });
 
     it('lleva a cambiar la contraseña cuando entró con la temporal', async () => {
-      mockPost(LOGIN_PATH, () => HttpResponse.json({ email: EMAIL, requiresPasswordChange: true }));
+      mockPost(LOGIN_PATH, () => {
+        mockSession(TEMPORARY_SESSION);
+        return HttpResponse.json(TEMPORARY_SESSION);
+      });
       const user = userEvent.setup();
       const { router } = await renderRoute(ROUTES.login);
 
       await fillCredentials(user);
       await user.click(submitButton());
 
-      await screen.findByText('Destino: cambiar contraseña');
+      expect(
+        await screen.findByRole('heading', { name: 'Actualiza tu contraseña' }),
+      ).toBeInTheDocument();
       expect(router.state.location.pathname).toBe(ROUTES.changePassword);
     });
 

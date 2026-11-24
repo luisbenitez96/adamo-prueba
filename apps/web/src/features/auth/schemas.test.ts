@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailRequestSchema, loginSchema, sessionSchema } from './schemas';
+import { changePasswordSchema, emailRequestSchema, loginSchema, sessionSchema } from './schemas';
 
 function firstMessage(result: { success: boolean; error?: { issues: { message: string }[] } }) {
   return result.error?.issues[0]?.message;
@@ -66,5 +66,72 @@ describe('sessionSchema', () => {
     ['sin correo', { requiresPasswordChange: false }],
   ])('rechaza una respuesta %s', (_caso, body) => {
     expect(sessionSchema.safeParse(body).success).toBe(false);
+  });
+});
+
+function messagesByField(values: { newPassword: unknown; confirmPassword: unknown }) {
+  const result = changePasswordSchema.safeParse(values);
+  const messages: Record<string, string[]> = {};
+  result.error?.issues.forEach((issue) => {
+    const field = String(issue.path[0]);
+    (messages[field] ??= []).push(issue.message);
+  });
+  return messages;
+}
+
+describe('changePasswordSchema', () => {
+  const POLICY = 'La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.';
+
+  it('acepta una contraseña válida repetida igual', () => {
+    expect(
+      changePasswordSchema.parse({ newPassword: 'NuevaClave1', confirmPassword: 'NuevaClave1' }),
+    ).toEqual({ newPassword: 'NuevaClave1', confirmPassword: 'NuevaClave1' });
+  });
+
+  it('con los dos campos vacíos pide cada uno, sin hablar de que no coinciden', () => {
+    expect(messagesByField({ newPassword: '', confirmPassword: '' })).toEqual({
+      newPassword: expect.arrayContaining(['Ingresa tu nueva contraseña']),
+      confirmPassword: ['Repite tu nueva contraseña'],
+    });
+  });
+
+  it.each([
+    ['es muy corta', 'Abc1234'],
+    ['no tiene mayúscula', 'abcdefg1'],
+    ['no tiene número', 'Abcdefgh'],
+    ['es demasiado larga', `A1${'a'.repeat(200)}`],
+  ])('rechaza una contraseña que %s', (_caso, password) => {
+    expect(
+      messagesByField({ newPassword: password, confirmPassword: password }).newPassword,
+    ).toEqual([POLICY]);
+  });
+
+  it('pide repetir la contraseña cuando la confirmación está vacía (es el primer mensaje que se muestra)', () => {
+    const messages = messagesByField({ newPassword: 'NuevaClave1', confirmPassword: '' });
+
+    expect(messages.confirmPassword?.[0]).toBe('Repite tu nueva contraseña');
+    expect(messages.newPassword).toBeUndefined();
+  });
+
+  it('avisa que no coinciden, en el campo de la confirmación', () => {
+    expect(messagesByField({ newPassword: 'NuevaClave1', confirmPassword: 'NuevaClave2' })).toEqual(
+      {
+        confirmPassword: ['Las contraseñas no coinciden'],
+      },
+    );
+  });
+
+  it('los espacios cuentan: no recorta ninguna de las dos', () => {
+    expect(
+      messagesByField({ newPassword: 'NuevaClave1', confirmPassword: 'NuevaClave1 ' }),
+    ).toEqual({
+      confirmPassword: ['Las contraseñas no coinciden'],
+    });
+  });
+
+  it('rechaza valores que no son texto', () => {
+    expect(
+      changePasswordSchema.safeParse({ newPassword: 12345678, confirmPassword: 12345678 }).success,
+    ).toBe(false);
   });
 });
