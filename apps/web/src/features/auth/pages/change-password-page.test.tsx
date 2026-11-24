@@ -187,7 +187,11 @@ describe('ChangePasswordPage', () => {
   describe('errores del servidor', () => {
     it('si la contraseña es igual a la actual lo muestra bajo el primer campo', async () => {
       mockPost(CHANGE_PATH, () =>
-        apiError(400, 'PASSWORD_REUSED', 'La nueva contraseña debe ser distinta a la actual'),
+        apiError(
+          400,
+          'PASSWORD_REUSED',
+          'No puedes reutilizar tu contraseña actual ni ninguna de las últimas 5 anteriores',
+        ),
       );
       const user = userEvent.setup();
       await renderRoute(ROUTES.changePassword);
@@ -195,7 +199,9 @@ describe('ChangePasswordPage', () => {
       await fill(user);
       await user.click(submitButton());
 
-      const message = await screen.findByText('La nueva contraseña debe ser distinta a la actual');
+      const message = await screen.findByText(
+        'No puedes reutilizar tu contraseña actual ni ninguna de las últimas 5 anteriores',
+      );
       expect(message).toHaveAttribute('role', 'alert');
       expect(newPasswordField()).toBeInvalid();
       expect(screen.getAllByRole('alert')).toHaveLength(1);

@@ -177,9 +177,7 @@ describe('ClientsPage', () => {
       let sessionChecks = 0;
       server.use(
         http.get('*/api/auth/me', () =>
-          ++sessionChecks === 1
-            ? HttpResponse.json(FULL_SESSION)
-            : apiError(401, 'UNAUTHENTICATED', 'Inicia sesión para continuar'),
+          HttpResponse.json({ session: ++sessionChecks === 1 ? FULL_SESSION : null }),
         ),
         http.get(SERVICES_PATH, () => apiError(401, 'UNAUTHENTICATED', 'x')),
       );
@@ -196,7 +194,7 @@ describe('ClientsPage', () => {
       let sessionChecks = 0;
       server.use(
         http.get('*/api/auth/me', () =>
-          HttpResponse.json(++sessionChecks === 1 ? FULL_SESSION : TEMPORARY_SESSION),
+          HttpResponse.json({ session: ++sessionChecks === 1 ? FULL_SESSION : TEMPORARY_SESSION }),
         ),
         http.get(SERVICES_PATH, () => apiError(403, 'PASSWORD_CHANGE_REQUIRED', 'x')),
       );

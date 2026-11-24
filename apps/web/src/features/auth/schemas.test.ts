@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { changePasswordSchema, emailRequestSchema, loginSchema, sessionSchema } from './schemas';
+import {
+  changePasswordSchema,
+  emailRequestSchema,
+  loginSchema,
+  meResponseSchema,
+  sessionSchema,
+} from './schemas';
 
 function firstMessage(result: { success: boolean; error?: { issues: { message: string }[] } }) {
   return result.error?.issues[0]?.message;
@@ -133,5 +139,28 @@ describe('changePasswordSchema', () => {
     expect(
       changePasswordSchema.safeParse({ newPassword: 12345678, confirmPassword: 12345678 }).success,
     ).toBe(false);
+  });
+});
+
+describe('meResponseSchema', () => {
+  it('acepta una sesión envuelta', () => {
+    expect(
+      meResponseSchema.parse({
+        session: { email: 'ana@correo.com', requiresPasswordChange: false },
+      }),
+    ).toEqual({ session: { email: 'ana@correo.com', requiresPasswordChange: false } });
+  });
+
+  it('acepta "sin sesión" como null', () => {
+    expect(meResponseSchema.parse({ session: null })).toEqual({ session: null });
+  });
+
+  it.each([
+    ['sin el campo session', {}],
+    ['con session sin definir', { session: undefined }],
+    ['con una sesión incompleta', { session: { email: 'ana@correo.com' } }],
+    ['con la sesión sin envoltorio', { email: 'ana@correo.com', requiresPasswordChange: false }],
+  ])('rechaza una respuesta %s', (_caso, body) => {
+    expect(meResponseSchema.safeParse(body).success).toBe(false);
   });
 });

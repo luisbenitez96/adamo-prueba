@@ -1,8 +1,11 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { extractTemporaryPassword } from '../../test/in-memory-email-sender.js';
+import { SMALL_SERVICE_DEFINITIONS } from '../../test/catalog-fixtures.js';
 import { createTestApp, TEST_COOKIE_NAME } from '../../test/create-test-app.js';
+import { extractTemporaryPassword } from '../../test/in-memory-email-sender.js';
 import { TestDatabase } from '../../test/test-database.js';
+import { generateClient } from '../clients/client-generator.js';
+import { ClientModel } from '../clients/client.model.js';
 import { UserModel } from '../users/user.model.js';
 import { seedDefaultServices } from './default-services.js';
 import { ServiceModel } from './service.model.js';
@@ -17,6 +20,7 @@ describe('GET /api/services', () => {
     await database.start();
     await UserModel.init();
     await ServiceModel.init();
+    await ClientModel.init();
   });
 
   beforeEach(async () => {
@@ -45,46 +49,72 @@ describe('GET /api/services', () => {
     return { ...context, agent };
   }
 
-  it('con acceso completo devuelve los 4 servicios del diseño, en orden', async () => {
-    const { agent, serviceRepository } = await fullAccessSession();
-    await seedDefaultServices(serviceRepository);
+  const seed = ({
+    serviceRepository,
+    clientRepository,
+  }: Awaited<ReturnType<typeof fullAccessSession>>) =>
+    seedDefaultServices(serviceRepository, clientRepository, SMALL_SERVICE_DEFINITIONS);
 
-    const response = await agent.get('/api/services');
+  it('con acceso completo devuelve los 4 servicios en orden, con su descripción y color', async () => {
+    const context = await fullAccessSession();
+    await seed(context);
+
+    const response = await context.agent.get('/api/services');
 
     expect(response.status).toBe(200);
-    expect(response.body.services).toEqual([
-      expect.objectContaining({
-        name: 'Adamo Pay',
-        description: 'Gestión de pagos',
-        clientsCount: 3827,
-        accentColor: '#0e9384',
-      }),
-      expect.objectContaining({
-        name: 'Adamo ID',
-        description: 'Verificación de identidad',
-        clientsCount: 9411,
-        accentColor: '#0086c9',
-      }),
-      expect.objectContaining({
-        name: 'Adamo Risk',
-        description: 'Reducción de riesgos',
-        clientsCount: 793,
-        accentColor: '#7839ee',
-      }),
-      expect.objectContaining({
-        name: 'Adamo Sign',
-        description: 'Firma de documentos',
-        clientsCount: 2738,
-        accentColor: '#3e4784',
-      }),
+    expect(
+      response.body.services.map((service: Record<string, unknown>) => ({
+        name: service.name,
+        description: service.description,
+        accentColor: service.accentColor,
+      })),
+    ).toEqual([
+      { name: 'Adamo Pay', description: 'Gestión de pagos', accentColor: '#0e9384' },
+      { name: 'Adamo ID', description: 'Verificación de identidad', accentColor: '#0086c9' },
+      { name: 'Adamo Risk', description: 'Reducción de riesgos', accentColor: '#7839ee' },
+      { name: 'Adamo Sign', description: 'Firma de documentos', accentColor: '#3e4784' },
     ]);
   });
 
-  it('cada servicio trae solo los campos públicos, sin datos internos de la base', async () => {
-    const { agent, serviceRepository } = await fullAccessSession();
-    await seedDefaultServices(serviceRepository);
+  it('la cantidad de clientes sale de contar los clientes guardados de cada servicio', async () => {
+    const context = await fullAccessSession();
+    await seed(context);
 
-    const response = await agent.get('/api/services');
+    const response = await context.agent.get('/api/services');
+
+    expect(
+      response.body.services.map((service: { clientsCount: number }) => service.clientsCount),
+    ).toEqual([12, 30, 3, 7]);
+  });
+
+  it('si se agrega un cliente, el contador sube: el número no está escrito de antemano', async () => {
+    const context = await fullAccessSession();
+    await seed(context);
+    const [pay] = await context.serviceRepository.findAll();
+    await context.clientRepository.insertMany([generateClient(pay!.id, 'Adamo Pay', 999)]);
+
+    const response = await context.agent.get('/api/services');
+
+    expect(response.body.services[0].clientsCount).toBe(13);
+    expect(response.body.services[1].clientsCount).toBe(30);
+  });
+
+  it('un servicio sin clientes muestra cero', async () => {
+    const context = await fullAccessSession();
+    await context.serviceRepository.insertMissing([
+      { name: 'Adamo Vacío', description: 'Sin clientes', accentColor: '#112233', order: 1 },
+    ]);
+
+    const response = await context.agent.get('/api/services');
+
+    expect(response.body.services[0].clientsCount).toBe(0);
+  });
+
+  it('cada servicio trae solo los campos públicos, sin datos internos de la base', async () => {
+    const context = await fullAccessSession();
+    await seed(context);
+
+    const response = await context.agent.get('/api/services');
 
     response.body.services.forEach((service: Record<string, unknown>) => {
       expect(Object.keys(service).sort()).toEqual([
@@ -107,10 +137,14 @@ describe('GET /api/services', () => {
   });
 
   it('sin sesión responde 401', async () => {
-    const { app, serviceRepository } = createTestApp();
-    await seedDefaultServices(serviceRepository);
+    const context = createTestApp();
+    await seedDefaultServices(
+      context.serviceRepository,
+      context.clientRepository,
+      SMALL_SERVICE_DEFINITIONS,
+    );
 
-    const response = await request(app).get('/api/services');
+    const response = await request(context.app).get('/api/services');
 
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe('UNAUTHENTICATED');
@@ -128,10 +162,14 @@ describe('GET /api/services', () => {
   });
 
   it('con la contraseña temporal sin cambiar responde 403 y no entrega datos', async () => {
-    const { agent, serviceRepository } = await temporarySession();
-    await seedDefaultServices(serviceRepository);
+    const context = await temporarySession();
+    await seedDefaultServices(
+      context.serviceRepository,
+      context.clientRepository,
+      SMALL_SERVICE_DEFINITIONS,
+    );
 
-    const response = await agent.get('/api/services');
+    const response = await context.agent.get('/api/services');
 
     expect(response.status).toBe(403);
     expect(response.body.error.code).toBe('PASSWORD_CHANGE_REQUIRED');
@@ -139,14 +177,18 @@ describe('GET /api/services', () => {
   });
 
   it('después de cambiar la contraseña temporal, ya puede ver los servicios', async () => {
-    const { agent, serviceRepository } = await temporarySession();
-    await seedDefaultServices(serviceRepository);
-    const before = await agent.get('/api/services');
+    const context = await temporarySession();
+    await seedDefaultServices(
+      context.serviceRepository,
+      context.clientRepository,
+      SMALL_SERVICE_DEFINITIONS,
+    );
+    const before = await context.agent.get('/api/services');
 
-    await agent
+    await context.agent
       .post('/api/auth/change-password')
       .send({ newPassword: 'NuevaClave1', confirmPassword: 'NuevaClave1' });
-    const after = await agent.get('/api/services');
+    const after = await context.agent.get('/api/services');
 
     expect(before.status).toBe(403);
     expect(after.status).toBe(200);
@@ -154,11 +196,11 @@ describe('GET /api/services', () => {
   });
 
   it('después de cerrar sesión deja de estar disponible', async () => {
-    const { agent, serviceRepository } = await fullAccessSession();
-    await seedDefaultServices(serviceRepository);
-    await agent.post('/api/auth/logout');
+    const context = await fullAccessSession();
+    await seed(context);
+    await context.agent.post('/api/auth/logout');
 
-    const response = await agent.get('/api/services');
+    const response = await context.agent.get('/api/services');
 
     expect(response.status).toBe(401);
   });

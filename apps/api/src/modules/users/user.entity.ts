@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   passwordHash: string | null;
+  passwordHistory: string[];
   tempPasswordHash: string | null;
   tempPasswordExpiresAt: Date | null;
   lastTempRequestAt: Date | null;
@@ -10,7 +11,14 @@ export interface User {
 }
 
 export type UserChanges = Partial<
-  Pick<User, 'passwordHash' | 'tempPasswordHash' | 'tempPasswordExpiresAt' | 'lastTempRequestAt'>
+  Pick<
+    User,
+    | 'passwordHash'
+    | 'passwordHistory'
+    | 'tempPasswordHash'
+    | 'tempPasswordExpiresAt'
+    | 'lastTempRequestAt'
+  >
 >;
 
 export type NewUser = Pick<User, 'email'> & UserChanges;

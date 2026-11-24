@@ -4,21 +4,16 @@ import { Button } from '../../../components/ui/button';
 import { FormAlert } from '../../../components/ui/form-alert';
 import { LoadingIndicator } from '../../../components/ui/loading-indicator';
 import { describeError } from '../../../lib/describe-error';
-import { ApiError } from '../../../lib/http';
 import { PageHeader } from '../components/page-header';
 import { ServiceCard } from '../components/service-card';
 import { useServices } from '../hooks/use-services';
+import { isSessionError } from '../session-error';
 import { clientsPageStyles } from './clients-page.styles';
-
-const SESSION_ERROR_STATUSES = [401, 403];
 
 export function ClientsPage() {
   const services = useServices();
 
-  if (
-    services.error instanceof ApiError &&
-    SESSION_ERROR_STATUSES.includes(services.error.status)
-  ) {
+  if (isSessionError(services.error)) {
     return <Navigate to={ROUTES.login} replace />;
   }
 

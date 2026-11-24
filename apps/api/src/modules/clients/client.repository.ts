@@ -1,0 +1,20 @@
+import type { ClientItem, NewClient } from './client.entity.js';
+
+export interface ClientPageQuery {
+  serviceId: string;
+  search?: string;
+  page: number;
+  pageSize: number;
+}
+
+export interface ClientPage {
+  items: ClientItem[];
+  total: number;
+}
+
+export interface ClientRepository {
+  countByService(): Promise<Map<string, number>>;
+  countForService(serviceId: string): Promise<number>;
+  insertMany(clients: NewClient[]): Promise<void>;
+  findPage(query: ClientPageQuery): Promise<ClientPage>;
+}

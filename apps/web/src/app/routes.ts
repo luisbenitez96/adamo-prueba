@@ -4,4 +4,9 @@ export const ROUTES = {
   forgotPassword: '/recuperar-contrasena',
   changePassword: '/cambiar-contrasena',
   dashboard: '/dashboard/clientes',
+  serviceClients: '/dashboard/clientes/:serviceId',
 } as const;
+
+export function serviceClientsPath(serviceId: string): string {
+  return `${ROUTES.dashboard}/${encodeURIComponent(serviceId)}`;
+}

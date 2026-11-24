@@ -42,6 +42,7 @@ const userWithoutCredentials: User = {
   id: 'user-1',
   email: 'ana@correo.com',
   passwordHash: null,
+  passwordHistory: [],
   tempPasswordHash: null,
   tempPasswordExpiresAt: null,
   lastTempRequestAt: null,

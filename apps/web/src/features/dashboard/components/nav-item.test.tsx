@@ -1,8 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { House } from 'lucide-react';
 import { MemoryRouter } from 'react-router';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { NavItem } from './nav-item';
 
 function renderAt(path: string, element: React.ReactElement) {
@@ -46,20 +45,6 @@ describe('NavItem con destino', () => {
     expect(screen.getByRole('link', { name: 'Clientes' })).not.toHaveAttribute('aria-current');
   });
 
-  it('avisa al navegar (para que el menú móvil se cierre)', async () => {
-    const onNavigate = vi.fn();
-    renderAt(
-      '/',
-      <NavItem icon={House} to="/dashboard/clientes" onNavigate={onNavigate}>
-        Clientes
-      </NavItem>,
-    );
-
-    await userEvent.click(screen.getByRole('link', { name: 'Clientes' }));
-
-    expect(onNavigate).toHaveBeenCalledTimes(1);
-  });
-
   it('el icono es decorativo', () => {
     const { container } = render(
       <MemoryRouter>
@@ -84,19 +69,5 @@ describe('NavItem sin destino', () => {
     renderAt('/', <NavItem icon={House}>Inicio</NavItem>);
 
     expect(screen.queryByRole('link')).toBeNull();
-  });
-
-  it('pulsarlo no avisa de ninguna navegación', async () => {
-    const onNavigate = vi.fn();
-    renderAt(
-      '/',
-      <NavItem icon={House} onNavigate={onNavigate}>
-        Inicio
-      </NavItem>,
-    );
-
-    await userEvent.click(screen.getByRole('button', { name: 'Inicio' }));
-
-    expect(onNavigate).not.toHaveBeenCalled();
   });
 });

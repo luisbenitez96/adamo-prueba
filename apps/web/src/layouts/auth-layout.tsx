@@ -21,7 +21,13 @@ export function AuthLayout() {
       </aside>
       <main className={authLayoutStyles.content} aria-busy={isNavigating}>
         <div className={authLayoutStyles.formArea}>
-          {isNavigating ? <LoadingIndicator /> : <Outlet />}
+          {isNavigating ? (
+            <LoadingIndicator />
+          ) : (
+            <div className={authLayoutStyles.page}>
+              <Outlet />
+            </div>
+          )}
         </div>
       </main>
     </div>

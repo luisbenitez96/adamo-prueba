@@ -1,4 +1,5 @@
-import { Button } from '../../../components/ui/button';
+import { serviceClientsPath } from '../../../app/routes';
+import { ButtonLink } from '../../../components/ui/button-link';
 import type { Service } from '../schemas';
 import { ClientsBadge } from './clients-badge';
 import { serviceCardStyles } from './service-card.styles';
@@ -11,14 +12,14 @@ export function ServiceCard({ service }: { service: Service }) {
       <div className={serviceCardStyles.badge}>
         <ClientsBadge count={service.clientsCount} />
       </div>
-      <Button
+      <ButtonLink
         size="sm"
-        aria-disabled="true"
+        to={serviceClientsPath(service.id)}
         aria-label={`Gestionar clientes de ${service.name}`}
         className={serviceCardStyles.action}
       >
         Gestionar clientes
-      </Button>
+      </ButtonLink>
       <div
         data-testid="accent-bar"
         aria-hidden="true"

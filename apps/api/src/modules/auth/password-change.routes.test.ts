@@ -17,6 +17,8 @@ import { UserModel } from '../users/user.model.js';
 const EMAIL = 'ana@correo.com';
 const NEW_PASSWORD = 'NuevaClave1';
 const POLICY_MESSAGE = 'Al menos 8 caracteres, una mayúscula y un número.';
+const REUSED_MESSAGE =
+  'No puedes reutilizar tu contraseña actual ni ninguna de las últimas 5 anteriores';
 const MISMATCH_MESSAGE = 'Las contraseñas no coinciden';
 
 describe('POST /api/auth/change-password', () => {
@@ -74,7 +76,7 @@ describe('POST /api/auth/change-password', () => {
       await agent.post('/api/auth/change-password').send(validBody);
       const me = await agent.get('/api/auth/me');
 
-      expect(me.body).toEqual({ email: EMAIL, requiresPasswordChange: false });
+      expect(me.body).toEqual({ session: { email: EMAIL, requiresPasswordChange: false } });
     });
 
     it('guarda la contraseña nueva como hash, nunca en texto plano', async () => {
@@ -126,7 +128,7 @@ describe('POST /api/auth/change-password', () => {
       expect(replay.body.error.code).toBe('TEMPORARY_PASSWORD_EXPIRED');
     });
 
-    it('tras cambiarla, la sesión temporal anterior deja de ser válida también para consultar al usuario', async () => {
+    it('tras cambiarla, la sesión temporal anterior ya no cuenta como sesión al consultar al usuario', async () => {
       const { agent, app, temporaryToken } = await startTemporarySession();
       await agent.post('/api/auth/change-password').send(validBody);
 
@@ -134,8 +136,8 @@ describe('POST /api/auth/change-password', () => {
         .get('/api/auth/me')
         .set('Cookie', `${TEST_COOKIE_NAME}=${temporaryToken}`);
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('INVALID_TOKEN');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ session: null });
     });
 
     it('si la contraseña temporal venció mientras tanto, pide solicitar una nueva', async () => {
@@ -159,7 +161,7 @@ describe('POST /api/auth/change-password', () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toEqual({
         code: 'PASSWORD_REUSED',
-        message: 'La nueva contraseña debe ser distinta a la actual',
+        message: REUSED_MESSAGE,
       });
     });
 
@@ -182,6 +184,132 @@ describe('POST /api/auth/change-password', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('PASSWORD_REUSED');
+    });
+
+    describe('historial de contraseñas', () => {
+      async function cycleThrough(passwords: string[]) {
+        const context = createTestApp();
+        await context.users.create({
+          email: EMAIL,
+          passwordHash: await context.hasher.hash('Inicial123'),
+        });
+        for (const password of passwords) {
+          await request(context.app).post('/api/auth/forgot-password').send({ email: EMAIL });
+          context.clock.advance(61_000);
+          const agent = request.agent(context.app);
+          await agent.post('/api/auth/login').send({
+            email: EMAIL,
+            password: extractTemporaryPassword(context.emailSender.sent.at(-1)!),
+          });
+          const response = await agent
+            .post('/api/auth/change-password')
+            .send({ newPassword: password, confirmPassword: password });
+          expect(response.status).toBe(200);
+        }
+        return context;
+      }
+
+      async function attemptChange(
+        context: Awaited<ReturnType<typeof cycleThrough>>,
+        password: string,
+      ) {
+        await request(context.app).post('/api/auth/forgot-password').send({ email: EMAIL });
+        context.clock.advance(61_000);
+        const agent = request.agent(context.app);
+        await agent.post('/api/auth/login').send({
+          email: EMAIL,
+          password: extractTemporaryPassword(context.emailSender.sent.at(-1)!),
+        });
+        return agent
+          .post('/api/auth/change-password')
+          .send({ newPassword: password, confirmPassword: password });
+      }
+
+      it.each([
+        ['la que tenía al empezar', 'Inicial123'],
+        ['la penúltima', 'Segunda123'],
+        ['la actual', 'Tercera123'],
+      ])('rechaza volver a usar %s', async (_name, password) => {
+        const context = await cycleThrough(['Primera123', 'Segunda123', 'Tercera123']);
+
+        const response = await attemptChange(context, password);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toEqual({ code: 'PASSWORD_REUSED', message: REUSED_MESSAGE });
+      });
+
+      it('recuerda las últimas 5 anteriores: la quinta anterior sigue bloqueada', async () => {
+        const context = await cycleThrough([
+          'Clave1aaa',
+          'Clave2aaa',
+          'Clave3aaa',
+          'Clave4aaa',
+          'Clave5aaa',
+        ]);
+
+        expect((await attemptChange(context, 'Inicial123')).status).toBe(400);
+        expect((await attemptChange(context, 'Clave1aaa')).status).toBe(400);
+      });
+
+      it('la sexta anterior ya se olvida y se puede volver a usar', async () => {
+        const context = await cycleThrough([
+          'Clave1aaa',
+          'Clave2aaa',
+          'Clave3aaa',
+          'Clave4aaa',
+          'Clave5aaa',
+          'Clave6aaa',
+        ]);
+
+        expect((await attemptChange(context, 'Inicial123')).status).toBe(200);
+      });
+
+      it('una contraseña nueva que nunca se usó se acepta', async () => {
+        const context = await cycleThrough(['Primera123', 'Segunda123']);
+
+        expect((await attemptChange(context, 'Totalmente9Nueva')).status).toBe(200);
+      });
+
+      it('un intento rechazado no altera el historial', async () => {
+        const context = await cycleThrough(['Primera123']);
+        await attemptChange(context, 'Primera123');
+        await attemptChange(context, 'Inicial123');
+
+        const user = await context.users.findByEmail(EMAIL);
+
+        expect(user!.passwordHistory).toHaveLength(1);
+      });
+
+      it('el historial guarda solo hashes, nunca las contraseñas en texto plano', async () => {
+        const context = await cycleThrough(['Primera123', 'Segunda123']);
+
+        const user = await context.users.findByEmail(EMAIL);
+
+        expect(user!.passwordHistory).toHaveLength(2);
+        user!.passwordHistory.forEach((hash) => expect(hash).toMatch(/^\$2[aby]\$/));
+      });
+
+      it('el historial de un usuario no afecta a otro', async () => {
+        const context = await cycleThrough(['Compartida1']);
+        await context.users.create({
+          email: 'otra@correo.com',
+          passwordHash: await context.hasher.hash('Otra12345'),
+        });
+        await request(context.app)
+          .post('/api/auth/forgot-password')
+          .send({ email: 'otra@correo.com' });
+        const agent = request.agent(context.app);
+        await agent.post('/api/auth/login').send({
+          email: 'otra@correo.com',
+          password: extractTemporaryPassword(context.emailSender.sent.at(-1)!),
+        });
+
+        const response = await agent
+          .post('/api/auth/change-password')
+          .send({ newPassword: 'Compartida1', confirmPassword: 'Compartida1' });
+
+        expect(response.status).toBe(200);
+      });
     });
 
     it.each([
@@ -302,8 +430,8 @@ describe('POST /api/auth/change-password', () => {
         .send({ email: EMAIL, password: NEW_PASSWORD });
 
       expect(temporaryLogin.body.requiresPasswordChange).toBe(true);
-      expect(meBefore.body.requiresPasswordChange).toBe(true);
-      expect(meAfter.body.requiresPasswordChange).toBe(false);
+      expect(meBefore.body.session.requiresPasswordChange).toBe(true);
+      expect(meAfter.body.session.requiresPasswordChange).toBe(false);
       expect(finalLogin.body).toEqual({ email: EMAIL, requiresPasswordChange: false });
     });
   });

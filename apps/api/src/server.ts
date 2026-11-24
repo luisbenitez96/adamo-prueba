@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { parseEnv } from './config/env.js';
 import { createAppDependencies } from './container.js';
 import { connectDatabase } from './database/connect-database.js';
+import { MongoClientRepository } from './modules/clients/mongo-client.repository.js';
 import { MongoServiceRepository } from './modules/services/mongo-service.repository.js';
 import { seedDefaultServices } from './modules/services/default-services.js';
 
@@ -10,7 +11,7 @@ const env = parseEnv();
 await connectDatabase(env.MONGO_URI);
 console.log('Conectado a MongoDB');
 
-await seedDefaultServices(new MongoServiceRepository());
+await seedDefaultServices(new MongoServiceRepository(), new MongoClientRepository());
 
 const app = createApp(createAppDependencies(env));
 

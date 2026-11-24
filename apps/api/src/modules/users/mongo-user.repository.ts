@@ -14,6 +14,7 @@ function toUser(document: HydratedDocument<UserDocument>): User {
     id: document.id,
     email: document.email,
     passwordHash: document.passwordHash,
+    passwordHistory: [...document.passwordHistory],
     tempPasswordHash: document.tempPasswordHash,
     tempPasswordExpiresAt: document.tempPasswordExpiresAt,
     lastTempRequestAt: document.lastTempRequestAt,

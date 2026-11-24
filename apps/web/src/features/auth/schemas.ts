@@ -43,6 +43,10 @@ export const sessionSchema = z.object({
   requiresPasswordChange: z.boolean(),
 });
 
+export const meResponseSchema = z.object({
+  session: sessionSchema.nullable(),
+});
+
 export type EmailRequestValues = z.infer<typeof emailRequestSchema>;
 export type LoginValues = z.infer<typeof loginSchema>;
 export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;

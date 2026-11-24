@@ -26,7 +26,7 @@ export function mockSession(session: Session | null) {
     return;
   }
 
-  server.use(http.get('*/api/auth/me', () => HttpResponse.json(session)));
+  server.use(http.get('*/api/auth/me', () => HttpResponse.json({ session })));
 }
 
 export const FULL_SESSION: Session = { email: 'ana@correo.com', requiresPasswordChange: false };

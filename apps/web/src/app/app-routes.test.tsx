@@ -133,11 +133,7 @@ describe('recorrido completo', () => {
     let session: Session | null = null;
 
     server.use(
-      http.get('*/api/auth/me', () =>
-        session
-          ? HttpResponse.json(session)
-          : apiError(401, 'UNAUTHENTICATED', 'Inicia sesión para continuar'),
-      ),
+      http.get('*/api/auth/me', () => HttpResponse.json({ session })),
       http.post('*/api/auth/login', () => {
         session = TEMPORARY_SESSION;
         return HttpResponse.json(session);

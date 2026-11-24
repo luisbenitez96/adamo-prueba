@@ -1,6 +1,5 @@
 import type { RequestHandler } from 'express';
 import type { LoginRequestBody } from './auth.schemas.js';
-import { getAuthContext } from './authenticate.js';
 import type { SessionCookie } from './session-cookie.js';
 import type { SessionService } from './session.service.js';
 
@@ -19,9 +18,15 @@ export class SessionController {
   };
 
   me: RequestHandler = async (req, res) => {
-    const { userId, scope } = getAuthContext(req);
+    const token = this.sessionCookie.read(req);
+    const session = await this.sessionService.sessionFor(token);
 
-    res.json(await this.sessionService.currentUser(userId, scope));
+    if (token && !session) {
+      this.sessionCookie.clear(res);
+    }
+
+    res.set('Cache-Control', 'no-store');
+    res.json({ session });
   };
 
   logout: RequestHandler = (_req, res) => {

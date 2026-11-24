@@ -1,5 +1,5 @@
-import { ApiError, http } from '../../../lib/http';
-import { sessionSchema } from '../schemas';
+import { http } from '../../../lib/http';
+import { meResponseSchema, sessionSchema } from '../schemas';
 import type { ChangePasswordValues, LoginValues, Session } from '../schemas';
 
 export const authApi = {
@@ -8,14 +8,8 @@ export const authApi = {
   },
 
   async me(): Promise<Session | null> {
-    try {
-      return sessionSchema.parse(await http.get('/api/auth/me'));
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        return null;
-      }
-      throw error;
-    }
+    const { session } = meResponseSchema.parse(await http.get('/api/auth/me'));
+    return session;
   },
 
   async changePassword(values: ChangePasswordValues): Promise<Session> {

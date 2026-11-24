@@ -15,6 +15,7 @@ export function createServicesRouter({
   const router = Router();
 
   router.get('/', authenticate, requireFullAccess, catalogController.list);
+  router.get('/:serviceId/clients', authenticate, requireFullAccess, catalogController.listClients);
 
   return router;
 }

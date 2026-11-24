@@ -2,6 +2,7 @@ import { AppError } from '../../shared/errors/app-error.js';
 import { InvalidSessionError } from '../../shared/errors/invalid-session-error.js';
 import type { PasswordHasher } from '../../shared/security/password-hasher.js';
 import type { TokenScope, TokenService } from '../../shared/security/token-service.js';
+import { PASSWORD_HISTORY_SIZE, rememberedPasswordHistory } from '../users/password-history.js';
 import { activeTemporaryPasswordHash } from '../users/temporary-password.js';
 import type { UserRepository } from '../users/user.repository.js';
 import type { Session } from './session.service.js';
@@ -39,23 +40,26 @@ export class PasswordChangeService {
       );
     }
 
-    const currentHashes = [user.passwordHash, temporaryPasswordHash].filter(
-      (hash): hash is string => hash !== null,
-    );
+    const unavailableHashes = [
+      temporaryPasswordHash,
+      ...(user.passwordHash ? [user.passwordHash] : []),
+      ...user.passwordHistory,
+    ];
     const matches = await Promise.all(
-      currentHashes.map((hash) => hasher.verify(newPassword, hash)),
+      unavailableHashes.map((hash) => hasher.verify(newPassword, hash)),
     );
 
     if (matches.some(Boolean)) {
       throw new AppError(
         400,
         'PASSWORD_REUSED',
-        'La nueva contraseña debe ser distinta a la actual',
+        `No puedes reutilizar tu contraseña actual ni ninguna de las últimas ${PASSWORD_HISTORY_SIZE} anteriores`,
       );
     }
 
     const updatedUser = await users.update(user.id, {
       passwordHash: await hasher.hash(newPassword),
+      passwordHistory: rememberedPasswordHistory(user),
       tempPasswordHash: null,
       tempPasswordExpiresAt: null,
     });

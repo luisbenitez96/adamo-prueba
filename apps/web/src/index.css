@@ -14,6 +14,19 @@
   --color-chip: #f3f4f6;
   --color-page: #fcfcfd;
   --color-danger: #dc2626;
+
+  --animate-page-in: page-in 0.3s ease-out;
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {

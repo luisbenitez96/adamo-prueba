@@ -8,13 +8,15 @@ import { renderApp } from '../test/render-app';
 import { server } from '../test/server';
 
 async function openDashboard() {
-  mockSession(FULL_SESSION);
+  mockSession({ ...FULL_SESSION, email: 'ana@correo.com' });
   const rendered = await renderApp(ROUTES.dashboard);
   await screen.findByRole('heading', { level: 1, name: 'Clientes' });
   return rendered;
 }
 
-const openMenuButton = () => screen.getByRole('button', { name: 'Abrir menú' });
+const mobileNav = () => screen.getByRole('navigation', { name: 'Principal (móvil)' });
+const moreButton = () => within(mobileNav()).getByRole('button', { name: 'Más' });
+const moreSheet = () => screen.getByRole('group', { name: 'Más opciones', hidden: true });
 
 describe('DashboardLayout', () => {
   it('muestra el menú lateral y el contenido principal', async () => {
@@ -44,79 +46,155 @@ describe('DashboardLayout', () => {
     ]);
   });
 
-  it('el menú móvil abierto queda fuera de la rejilla de la página', async () => {
+  it('la barra inferior y la hoja "Más" quedan fuera de la rejilla de la página', async () => {
     await openDashboard();
-    await userEvent.click(openMenuButton());
 
-    expect(screen.getByRole('main').parentElement).not.toContainElement(screen.getByRole('dialog'));
+    const grid = screen.getByRole('main').parentElement!;
+
+    expect(grid).not.toContainElement(mobileNav());
+    expect(grid).not.toContainElement(moreSheet());
   });
 
-  describe('menú en pantallas pequeñas', () => {
-    it('empieza cerrado, con el botón que lo abre indicando su estado', async () => {
+  it('ya no hay botón de menú hamburguesa', async () => {
+    await openDashboard();
+
+    expect(screen.queryByRole('button', { name: 'Abrir menú' })).toBeNull();
+  });
+
+  describe('barra de navegación inferior (pantallas pequeñas)', () => {
+    it('tiene tres pestañas: Inicio, Clientes y Más', async () => {
       await openDashboard();
 
-      expect(screen.queryByRole('dialog')).toBeNull();
-      expect(openMenuButton()).toHaveAttribute('aria-expanded', 'false');
+      const nav = within(mobileNav());
+      expect(nav.getByRole('button', { name: 'Inicio' })).toBeInTheDocument();
+      expect(nav.getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
+      expect(nav.getByRole('button', { name: 'Más' })).toBeInTheDocument();
     });
 
-    it('el botón lo abre y muestra la misma navegación', async () => {
+    it('Clientes se marca como la página actual y es la pestaña activa', async () => {
       await openDashboard();
 
-      await userEvent.click(openMenuButton());
-
-      const dialog = screen.getByRole('dialog', { name: 'Menú de navegación' });
-      expect(within(dialog).getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
-      expect(within(dialog).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
-      expect(openMenuButton()).toHaveAttribute('aria-expanded', 'true');
-    });
-
-    it('se cierra con el botón Cerrar menú y devuelve el foco al botón que lo abrió', async () => {
-      await openDashboard();
-      await userEvent.click(openMenuButton());
-
-      await userEvent.click(screen.getByRole('button', { name: 'Cerrar menú' }));
-
-      expect(screen.queryByRole('dialog')).toBeNull();
-      expect(openMenuButton()).toHaveFocus();
-      expect(openMenuButton()).toHaveAttribute('aria-expanded', 'false');
-    });
-
-    it('se cierra con la tecla Escape', async () => {
-      await openDashboard();
-      await userEvent.click(openMenuButton());
-
-      await userEvent.keyboard('{Escape}');
-
-      expect(screen.queryByRole('dialog')).toBeNull();
-    });
-
-    it('al elegir una opción de navegación se cierra solo', async () => {
-      await openDashboard();
-      await userEvent.click(openMenuButton());
-      const dialog = screen.getByRole('dialog');
-
-      await userEvent.click(within(dialog).getByRole('link', { name: 'Clientes' }));
-
-      expect(screen.queryByRole('dialog')).toBeNull();
-    });
-
-    it('cerrar sesión desde el menú móvil también funciona', async () => {
-      server.use(
-        http.post('*/api/auth/logout', () => {
-          mockSession(null);
-          return new HttpResponse(null, { status: 204 });
-        }),
+      expect(within(mobileNav()).getByRole('link', { name: 'Clientes' })).toHaveAttribute(
+        'aria-current',
+        'page',
       );
-      await openDashboard();
-      await userEvent.click(openMenuButton());
+      expect(mobileNav()).toHaveAttribute('data-active-tab', 'clients');
+    });
 
-      await userEvent.click(
-        within(screen.getByRole('dialog')).getByRole('button', { name: 'Cerrar sesión' }),
+    it('Inicio se anuncia como no disponible y no cambia de pantalla', async () => {
+      const { router } = await openDashboard();
+
+      await userEvent.click(within(mobileNav()).getByRole('button', { name: 'Inicio' }));
+
+      expect(within(mobileNav()).getByRole('button', { name: 'Inicio' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
       );
+      expect(router.state.location.pathname).toBe(ROUTES.dashboard);
+    });
 
-      expect(
-        await screen.findByRole('heading', { name: 'Inicia sesión en tu cuenta de AdamoServices' }),
-      ).toBeInTheDocument();
+    it('la hoja "Más" empieza cerrada: inerte para el teclado y los lectores de pantalla', async () => {
+      await openDashboard();
+
+      expect(moreSheet()).toHaveAttribute('inert');
+      expect(moreButton()).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('el botón Más controla la hoja: su aria-controls es el id real de la hoja', async () => {
+      await openDashboard();
+
+      expect(moreSheet().id).not.toBe('');
+      expect(moreButton()).toHaveAttribute('aria-controls', moreSheet().id);
+    });
+
+    describe('al abrir "Más"', () => {
+      it('muestra la hoja con el perfil, el correo y Cerrar sesión', async () => {
+        await openDashboard();
+
+        await userEvent.click(moreButton());
+
+        const sheet = within(moreSheet());
+        expect(moreSheet()).not.toHaveAttribute('inert');
+        expect(sheet.getByRole('button', { name: /Mi perfil/ })).toHaveTextContent(
+          'ana@correo.com',
+        );
+        expect(sheet.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
+      });
+
+      it('la pestaña Más pasa a ser la activa y el botón indica que está expandido', async () => {
+        await openDashboard();
+
+        await userEvent.click(moreButton());
+
+        expect(moreButton()).toHaveAttribute('aria-expanded', 'true');
+        expect(mobileNav()).toHaveAttribute('data-active-tab', 'more');
+      });
+
+      it('lleva el foco al primer elemento de la hoja', async () => {
+        await openDashboard();
+
+        await userEvent.click(moreButton());
+
+        expect(within(moreSheet()).getByRole('button', { name: /Mi perfil/ })).toHaveFocus();
+      });
+
+      it('el botón Más vuelve a cerrarla', async () => {
+        await openDashboard();
+        await userEvent.click(moreButton());
+
+        await userEvent.click(moreButton());
+
+        expect(moreSheet()).toHaveAttribute('inert');
+        expect(mobileNav()).toHaveAttribute('data-active-tab', 'clients');
+      });
+
+      it('la tecla Escape la cierra y devuelve el foco al botón Más', async () => {
+        await openDashboard();
+        await userEvent.click(moreButton());
+
+        await userEvent.keyboard('{Escape}');
+
+        expect(moreSheet()).toHaveAttribute('inert');
+        expect(moreButton()).toHaveFocus();
+        expect(moreButton()).toHaveAttribute('aria-expanded', 'false');
+      });
+
+      it('tocar el fondo oscuro la cierra', async () => {
+        await openDashboard();
+        await userEvent.click(moreButton());
+
+        await userEvent.click(document.querySelector('[role="presentation"]') as HTMLElement);
+
+        expect(moreSheet()).toHaveAttribute('inert');
+      });
+
+      it('Escape no hace nada mientras está cerrada (no roba el foco)', async () => {
+        await openDashboard();
+        within(mobileNav()).getByRole('link', { name: 'Clientes' }).focus();
+
+        await userEvent.keyboard('{Escape}');
+
+        expect(moreButton()).not.toHaveFocus();
+      });
+
+      it('cerrar sesión desde la hoja funciona', async () => {
+        server.use(
+          http.post('*/api/auth/logout', () => {
+            mockSession(null);
+            return new HttpResponse(null, { status: 204 });
+          }),
+        );
+        await openDashboard();
+        await userEvent.click(moreButton());
+
+        await userEvent.click(within(moreSheet()).getByRole('button', { name: 'Cerrar sesión' }));
+
+        expect(
+          await screen.findByRole('heading', {
+            name: 'Inicia sesión en tu cuenta de AdamoServices',
+          }),
+        ).toBeInTheDocument();
+      });
     });
   });
 

@@ -9,4 +9,5 @@ export const authLayoutStyles = {
   content:
     'flex justify-center px-6 py-10 lg:items-center lg:pb-[152px] lg:pl-8 lg:pr-8 lg:pt-0 xl:pr-0',
   formArea: 'w-full max-w-[495px]',
+  page: 'animate-page-in motion-reduce:animate-none',
 };

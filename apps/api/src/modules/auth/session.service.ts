@@ -53,7 +53,23 @@ export class SessionService {
     };
   }
 
-  async currentUser(userId: string, scope: TokenScope): Promise<CurrentUser> {
+  async sessionFor(token: string | undefined): Promise<CurrentUser | null> {
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const { sub, scope } = this.dependencies.tokens.verify(token);
+      return await this.currentUser(sub, scope);
+    } catch (error) {
+      if (error instanceof InvalidSessionError) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private async currentUser(userId: string, scope: TokenScope): Promise<CurrentUser> {
     const user = await this.dependencies.users.findById(userId);
 
     if (!user) {

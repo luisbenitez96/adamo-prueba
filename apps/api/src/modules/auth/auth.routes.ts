@@ -38,7 +38,7 @@ export function createAuthRouter({
     authController.forgotPassword,
   );
   router.post('/login', loginRateLimiter, validateBody(loginSchema), sessionController.login);
-  router.get('/me', authenticate, sessionController.me);
+  router.get('/me', sessionController.me);
   router.post(
     '/change-password',
     authenticate,

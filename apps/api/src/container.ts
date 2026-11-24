@@ -5,6 +5,7 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { PasswordChangeService } from './modules/auth/password-change.service.js';
 import { SessionCookie } from './modules/auth/session-cookie.js';
 import { SessionService } from './modules/auth/session.service.js';
+import { MongoClientRepository } from './modules/clients/mongo-client.repository.js';
 import { CatalogService } from './modules/services/catalog.service.js';
 import { MongoServiceRepository } from './modules/services/mongo-service.repository.js';
 import { MongoUserRepository } from './modules/users/mongo-user.repository.js';
@@ -72,7 +73,7 @@ export function createAppDependencies(env: Env): AppDependencies {
     authService,
     sessionService,
     passwordChangeService,
-    catalogService: new CatalogService(new MongoServiceRepository()),
+    catalogService: new CatalogService(new MongoServiceRepository(), new MongoClientRepository()),
     tokenService,
     sessionCookie,
     accountRateLimit: ACCOUNT_RATE_LIMIT,

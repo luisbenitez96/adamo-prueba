@@ -265,53 +265,81 @@ describe('rutas de sesión', () => {
   });
 
   describe('GET /api/auth/me', () => {
-    it('sin cookie responde 401 UNAUTHENTICATED', async () => {
+    const NO_SESSION = { session: null };
+
+    async function loginAsTemporaryUser() {
+      const context = createTestApp();
+      await request(context.app).post('/api/auth/register').send({ email: EMAIL });
+      const agent = request.agent(context.app);
+      await agent
+        .post('/api/auth/login')
+        .send({ email: EMAIL, password: extractTemporaryPassword(context.emailSender.sent[0]!) });
+      return { ...context, agent };
+    }
+
+    it('sin cookie responde 200 sin sesión: no haber iniciado sesión no es un error', async () => {
       const { app } = await createAppWithUser();
 
       const response = await request(app).get('/api/auth/me');
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('UNAUTHENTICATED');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(NO_SESSION);
     });
 
-    it('con una cookie que no es un token responde 401 INVALID_TOKEN', async () => {
+    it('sin cookie no intenta borrar ninguna cookie', async () => {
       const { app } = await createAppWithUser();
 
-      const response = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', `${TEST_COOKIE_NAME}=basura`);
+      const response = await request(app).get('/api/auth/me');
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('INVALID_TOKEN');
+      expect(sessionCookieOf(response)).toBeUndefined();
     });
 
-    it('con un token vencido responde 401', async () => {
-      const { app, user } = await createAppWithUser();
-      const expiredToken = new JwtTokenService(TEST_JWT_SECRET, -60).sign({
-        sub: user.id,
-        scope: 'full',
-      });
+    it('nunca permite guardar la respuesta en caché', async () => {
+      const { app } = await createAppWithUser();
 
-      const response = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', `${TEST_COOKIE_NAME}=${expiredToken}`);
+      const response = await request(app).get('/api/auth/me');
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('INVALID_TOKEN');
+      expect(response.headers['cache-control']).toBe('no-store');
     });
 
-    it('con un token firmado con otro secreto responde 401', async () => {
-      const { app, user } = await createAppWithUser();
-      const forgedToken = new JwtTokenService('otro-secreto-distinto-y-bastante-largo', 3600).sign({
-        sub: user.id,
-        scope: 'full',
+    describe.each([
+      ['una cookie que no es un token', () => 'basura'],
+      [
+        'un token vencido',
+        (userId: string) =>
+          new JwtTokenService(TEST_JWT_SECRET, -60).sign({ sub: userId, scope: 'full' }),
+      ],
+      [
+        'un token firmado con otro secreto',
+        (userId: string) =>
+          new JwtTokenService('otro-secreto-distinto-y-bastante-largo', 3600).sign({
+            sub: userId,
+            scope: 'full',
+          }),
+      ],
+    ])('con %s', (_caso, makeCookieValue) => {
+      it('responde 200 sin sesión', async () => {
+        const { app, user } = await createAppWithUser();
+
+        const response = await request(app)
+          .get('/api/auth/me')
+          .set('Cookie', `${TEST_COOKIE_NAME}=${makeCookieValue(user.id)}`);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual(NO_SESSION);
       });
 
-      const response = await request(app)
-        .get('/api/auth/me')
-        .set('Cookie', `${TEST_COOKIE_NAME}=${forgedToken}`);
+      it('borra la cookie vieja para no volver a enviarla', async () => {
+        const { app, user } = await createAppWithUser();
 
-      expect(response.status).toBe(401);
+        const response = await request(app)
+          .get('/api/auth/me')
+          .set('Cookie', `${TEST_COOKIE_NAME}=${makeCookieValue(user.id)}`);
+
+        const cookie = sessionCookieOf(response)!;
+        expect(cookie).toMatch(new RegExp(`^${TEST_COOKIE_NAME}=;`));
+        expect(cookie).toContain('Expires=Thu, 01 Jan 1970');
+      });
     });
 
     it('no acepta el token en la cabecera Authorization, solo en la cookie', async () => {
@@ -322,8 +350,8 @@ describe('rutas de sesión', () => {
         .get('/api/auth/me')
         .set('Authorization', `Bearer ${token}`);
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('UNAUTHENTICATED');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(NO_SESSION);
     });
 
     it('tras iniciar sesión devuelve el usuario de la sesión', async () => {
@@ -334,51 +362,46 @@ describe('rutas de sesión', () => {
       const response = await agent.get('/api/auth/me');
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ email: EMAIL, requiresPasswordChange: false });
+      expect(response.body).toEqual({ session: { email: EMAIL, requiresPasswordChange: false } });
+    });
+
+    it('con una sesión válida no toca la cookie', async () => {
+      const { app } = await createAppWithUser();
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
+
+      const response = await agent.get('/api/auth/me');
+
+      expect(sessionCookieOf(response)).toBeUndefined();
     });
 
     it('con una sesión de contraseña temporal indica que falta cambiarla', async () => {
-      const { app, emailSender } = createTestApp();
-      await request(app).post('/api/auth/register').send({ email: EMAIL });
-      const agent = request.agent(app);
-      await agent
-        .post('/api/auth/login')
-        .send({ email: EMAIL, password: extractTemporaryPassword(emailSender.sent[0]!) });
+      const { agent } = await loginAsTemporaryUser();
 
       const response = await agent.get('/api/auth/me');
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ email: EMAIL, requiresPasswordChange: true });
+      expect(response.body).toEqual({ session: { email: EMAIL, requiresPasswordChange: true } });
     });
 
-    it('si la contraseña temporal venció, la sesión pendiente de cambio deja de ser válida', async () => {
-      const { app, emailSender, clock } = createTestApp();
-      await request(app).post('/api/auth/register').send({ email: EMAIL });
-      const agent = request.agent(app);
-      await agent
-        .post('/api/auth/login')
-        .send({ email: EMAIL, password: extractTemporaryPassword(emailSender.sent[0]!) });
+    it('si la contraseña temporal venció, la sesión pendiente de cambio deja de contar y se borra la cookie', async () => {
+      const { agent, clock } = await loginAsTemporaryUser();
 
       clock.advance(TEST_TEMP_PASSWORD_TTL_MS + 1000);
       const response = await agent.get('/api/auth/me');
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('INVALID_TOKEN');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(NO_SESSION);
+      expect(sessionCookieOf(response)).toContain('Expires=Thu, 01 Jan 1970');
     });
 
     it('la sesión pendiente de cambio sigue válida justo antes de que venza la temporal', async () => {
-      const { app, emailSender, clock } = createTestApp();
-      await request(app).post('/api/auth/register').send({ email: EMAIL });
-      const agent = request.agent(app);
-      await agent
-        .post('/api/auth/login')
-        .send({ email: EMAIL, password: extractTemporaryPassword(emailSender.sent[0]!) });
+      const { agent, clock } = await loginAsTemporaryUser();
 
       clock.advance(TEST_TEMP_PASSWORD_TTL_MS - 1000);
       const response = await agent.get('/api/auth/me');
 
-      expect(response.status).toBe(200);
-      expect(response.body.requiresPasswordChange).toBe(true);
+      expect(response.body.session.requiresPasswordChange).toBe(true);
     });
 
     it('una sesión de acceso completo no depende de ninguna contraseña temporal', async () => {
@@ -389,11 +412,10 @@ describe('rutas de sesión', () => {
       clock.advance(TEST_TEMP_PASSWORD_TTL_MS * 10);
       const response = await agent.get('/api/auth/me');
 
-      expect(response.status).toBe(200);
-      expect(response.body.requiresPasswordChange).toBe(false);
+      expect(response.body.session.requiresPasswordChange).toBe(false);
     });
 
-    it('si el usuario ya no existe, la sesión deja de ser válida', async () => {
+    it('si el usuario ya no existe, la sesión deja de contar y se borra la cookie', async () => {
       const { app } = await createAppWithUser();
       const agent = request.agent(app);
       await agent.post('/api/auth/login').send({ email: EMAIL, password: PASSWORD });
@@ -401,8 +423,9 @@ describe('rutas de sesión', () => {
 
       const response = await agent.get('/api/auth/me');
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('INVALID_TOKEN');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(NO_SESSION);
+      expect(sessionCookieOf(response)).toContain('Expires=Thu, 01 Jan 1970');
     });
   });
 
@@ -429,8 +452,8 @@ describe('rutas de sesión', () => {
 
       const response = await agent.get('/api/auth/me');
 
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe('UNAUTHENTICATED');
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ session: null });
     });
 
     it('sin sesión también responde 204', async () => {

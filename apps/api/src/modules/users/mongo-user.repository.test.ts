@@ -28,6 +28,7 @@ describe('MongoUserRepository', () => {
       expect(user).toMatchObject({
         email: 'ana@correo.com',
         passwordHash: null,
+        passwordHistory: [],
         tempPasswordHash: null,
         tempPasswordExpiresAt: null,
         lastTempRequestAt: null,
@@ -122,6 +123,27 @@ describe('MongoUserRepository', () => {
 
     it('devuelve null si el id no tiene formato válido', async () => {
       expect(await repository.findById('no-es-un-id')).toBeNull();
+    });
+  });
+
+  describe('historial de contraseñas', () => {
+    it('guarda y devuelve el historial en el mismo orden', async () => {
+      const user = await repository.create({ email: 'ana@correo.com' });
+
+      const updated = await repository.update(user.id, { passwordHistory: ['h1', 'h2', 'h3'] });
+
+      expect(updated!.passwordHistory).toEqual(['h1', 'h2', 'h3']);
+      expect((await repository.findById(user.id))!.passwordHistory).toEqual(['h1', 'h2', 'h3']);
+    });
+
+    it('un usuario guardado antes de existir el historial lo recibe vacío', async () => {
+      const { id } = await repository.create({ email: 'vieja@correo.com' });
+      await UserModel.collection.updateOne(
+        { email: 'vieja@correo.com' },
+        { $unset: { passwordHistory: '' } },
+      );
+
+      expect((await repository.findById(id))!.passwordHistory).toEqual([]);
     });
   });
 
